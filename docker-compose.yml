@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram-userbot
+    restart: unless-stopped
+    environment:
+      - API_ID=${API_ID}
+      - API_HASH=${API_HASH}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - STRING_SESSION=${STRING_SESSION}
+      - ADMIN_ID=${ADMIN_ID}
+      - SOURCE_CHAT_ID=${SOURCE_CHAT_ID:-}
+      - TARGET_CHAT_ID=${TARGET_CHAT_ID:-}
+      - FORWARD_MODE=${FORWARD_MODE:-copy}
+      - MESSAGE_DELAY=${MESSAGE_DELAY:-1}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config.ini:/app/config.ini
+      - ./logs:/app/logs
+    ports:
+      - "8080:8080"
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
+
+volumes:
+  logs:
