@@ -71,9 +71,10 @@ class TelegramForwarder:
         except Exception as e:
             self.logger.error(f"Failed to setup Telegram client: {e}")
             raise
-    
-    def _load_config(self):
+            
+            def _load_config(self):
     """Load configuration settings"""
+    
     try:
         # Load chat configurations - support multiple sources and targets
         source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
@@ -94,7 +95,7 @@ class TelegramForwarder:
         # Keep backward compatibility
         self.source_chat = self.source_chats[0]
         self.target_chat = self.target_chats[0]
-            
+        
             # Load forwarding options including all media filters
             self.forward_options = {
                 'delay': self.config_manager.getfloat('forwarding', 'forward_delay', fallback=1.0),
