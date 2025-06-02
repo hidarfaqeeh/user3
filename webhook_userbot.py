@@ -8,8 +8,6 @@ import asyncio
 import logging
 import os
 import json
-from dotenv import load_dotenv
-load_dotenv()
 from aiohttp import web, ClientSession
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
@@ -35,7 +33,7 @@ class WebhookUserbot:
         try:
             api_id = self.config_manager.get('telegram', 'api_id') or os.getenv('API_ID')
             api_hash = self.config_manager.get('telegram', 'api_hash') or os.getenv('API_HASH')
-            string_session = os.getenv('STRING_SESSION')
+            string_session = os.getenv('TELEGRAM_STRING_SESSION')
             
             if string_session:
                 self.logger.info("🔗 Setting up webhook client with string session")
