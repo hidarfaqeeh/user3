@@ -71,29 +71,30 @@ class TelegramForwarder:
         except Exception as e:
             self.logger.error(f"Failed to setup Telegram client: {e}")
             raise
-            
-            def _load_config(self):
-                """Load configuration settings"""
-                try:
-                    # Load chat configurations - support multiple sources and targets
-                    source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
-                    target_chat_raw = self.config_manager.get('forwarding', 'target_chat')
-        
-        # Parse multiple sources 
+    
+    def _load_config(self):
+        """Load configuration settings"""
+        try:
+            # Load chat configurations - support multiple sources and targets
+            source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
+            target_chat_raw = self.config_manager.get('forwarding', 'target_chat')
+
+            # Parse multiple sources 
             if ',' in source_chat_raw:
                 self.source_chats = [chat.strip() for chat in source_chat_raw.split(',') if chat.strip()]
             else:
                 self.source_chats = [source_chat_raw.strip()]
             
-        # Parse multiple targets (comma-separated)
+            # Parse multiple targets (comma-separated)
             if ',' in target_chat_raw:
-            self.target_chats = [chat.strip() for chat in target_chat_raw.split(',') if chat.strip()]
-        else:
-        self.target_chats = [target_chat_raw.strip()]
-        
-        # Keep backward compatibility
-        self.source_chat = self.source_chats[0]
-        self.target_chat = self.target_chats[0]
+                self.target_chats = [chat.strip() for chat in target_chat_raw.split(',') if chat.strip()]
+            else:
+                self.target_chats = [target_chat_raw.strip()]
+            
+            # Keep backward compatibility
+            self.source_chat = self.source_chats[0]
+            self.target_chat = self.target_chats[0]
+            
             # Load forwarding options including all media filters
             self.forward_options = {
                 'delay': self.config_manager.getfloat('forwarding', 'forward_delay', fallback=1.0),
@@ -145,12 +146,12 @@ class TelegramForwarder:
                 'multi_mode_enabled': self.config_manager.getboolean('forwarding', 'multi_mode_enabled', fallback=False)
             }
             
-        if not self.source_chat or not self.target_chat:
+            if not self.source_chat or not self.target_chat:
                 raise ValueError("Please configure source_chat and target_chat in config.ini")
                 
             self.logger.info(f"Configuration loaded - Source: {self.source_chat}, Target: {self.target_chat}")
             
-except Exception as e:
+        except Exception as e:
             self.logger.error(f"Failed to load configuration: {e}")
             raise
     
@@ -176,37 +177,37 @@ except Exception as e:
             raise
     
     async def _validate_chats(self):
-    """Validate access to source and target chats"""
-    try:
-        # Validate all source chats
-        for i, source_chat in enumerate(self.source_chats):
-            try:
+        """Validate access to source and target chats"""
+        try:
+            # Validate all source chats
+            for i, source_chat in enumerate(self.source_chats):
                 try:
-                    source_entity = await self.client.get_entity(int(source_chat))
-                    self.logger.info(f"Source chat {i+1} validated: {getattr(source_entity, 'title', 'Private Chat')} ({source_chat})")
-                except ValueError:
-                    # Try as username if not numeric
-                    source_entity = await self.client.get_entity(source_chat)
-                    self.logger.info(f"Source chat {i+1} validated: {getattr(source_entity, 'title', 'Private Chat')} ({source_chat})")
-            except Exception as e:
-                self.logger.warning(f"Source chat {i+1} ({source_chat}) validation failed, but continuing: {e}")
-        
-        # Validate all target chats
-        for i, target_chat in enumerate(self.target_chats):
-            try:
+                    try:
+                        source_entity = await self.client.get_entity(int(source_chat))
+                        self.logger.info(f"Source chat {i+1} validated: {getattr(source_entity, 'title', 'Private Chat')} ({source_chat})")
+                    except ValueError:
+                        # Try as username if not numeric
+                        source_entity = await self.client.get_entity(source_chat)
+                        self.logger.info(f"Source chat {i+1} validated: {getattr(source_entity, 'title', 'Private Chat')} ({source_chat})")
+                except Exception as e:
+                    self.logger.warning(f"Source chat {i+1} ({source_chat}) validation failed, but continuing: {e}")
+            
+            # Validate all target chats
+            for i, target_chat in enumerate(self.target_chats):
                 try:
-                    target_entity = await self.client.get_entity(int(target_chat))
-                    self.logger.info(f"Target chat {i+1} validated: {getattr(target_entity, 'title', 'Private Chat')} ({target_chat})")
-                except ValueError:
-                    # Try as username if not numeric
-                    target_entity = await self.client.get_entity(target_chat)
-                    self.logger.info(f"Target chat {i+1} validated: {getattr(target_entity, 'title', 'Private Chat')} ({target_chat})")
-            except Exception as e:
-                self.logger.warning(f"Target chat {i+1} ({target_chat}) validation failed, but continuing: {e}")
-        
-    except Exception as e:
-        self.logger.warning(f"Chat validation had issues, but starting anyway: {e}")
-        # Don't raise - let the bot try to work and show specific errors when forwarding
+                    try:
+                        target_entity = await self.client.get_entity(int(target_chat))
+                        self.logger.info(f"Target chat {i+1} validated: {getattr(target_entity, 'title', 'Private Chat')} ({target_chat})")
+                    except ValueError:
+                        # Try as username if not numeric
+                        target_entity = await self.client.get_entity(target_chat)
+                        self.logger.info(f"Target chat {i+1} validated: {getattr(target_entity, 'title', 'Private Chat')} ({target_chat})")
+                except Exception as e:
+                    self.logger.warning(f"Target chat {i+1} ({target_chat}) validation failed, but continuing: {e}")
+            
+        except Exception as e:
+            self.logger.warning(f"Chat validation had issues, but starting anyway: {e}")
+            # Don't raise - let the bot try to work and show specific errors when forwarding
     
     def _register_handlers(self):
         """Register event handlers for message monitoring"""
@@ -457,16 +458,16 @@ except Exception as e:
                 for target_entity in target_entities_to_try:
                     try:
                         if forward_mode == 'copy':
-                        # Copy mode: Send message as new without showing source
-                        self.logger.info(f"📋 Using copy mode to {target_chat}")
-                        await self._copy_message(message, target_entity)
-                    else:
-                        # Forward mode: Traditional forward with source info
-                        self.logger.info(f"➡️ Using forward mode to {target_chat}")
-                        await self.client.forward_messages(
-                            entity=target_entity,
-                            messages=message
-                        )
+                            # Copy mode: Send message as new without showing source
+                            self.logger.info(f"📋 Using copy mode to {target_chat}")
+                            await self._copy_message(message, target_entity)
+                        else:
+                            # Forward mode: Traditional forward with source info
+                            self.logger.info(f"➡️ Using forward mode to {target_chat}")
+                            await self.client.forward_messages(
+                                entity=target_entity,
+                                messages=message
+                            )
                         
                         forwarded = True
                         break
@@ -492,7 +493,9 @@ except Exception as e:
                 return True
                 
             except FloodWaitError as e:
-                # Smart flood wawaits: wait the full time
+                # Smart flood wait handling
+                if e.seconds <= 10:
+                    # Short waits: wait the full time
                     wait_time = e.seconds
                 elif e.seconds <= 60:
                     # Medium waits: wait 80% of the time
@@ -533,7 +536,7 @@ except Exception as e:
                     continue
                 return False
 
-async def _forward_message(self, message):
+    async def _forward_message(self, message):
         """Forward a message to all targets - backward compatibility method"""
         successful_forwards = 0
         
@@ -835,4 +838,3 @@ async def _forward_message(self, message):
         if self.client and self.client.is_connected():
             await self.client.disconnect()
             self.logger.info("Userbot disconnected")
-            
