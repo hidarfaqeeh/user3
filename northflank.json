@@ -18,7 +18,7 @@
         "instances": 1,
         "docker": {
           "configType": "customCommand",
-          "customCommand": "python run_bot.py"
+          "customCommand": "python run_ultra_fast.py"
         },
         "storage": {
           "ephemeralStorage": {
