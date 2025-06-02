@@ -75,26 +75,25 @@ class TelegramForwarder:
             def _load_config(self):
                 """Load configuration settings"""
                 try:
-        # Load chat configurations - support multiple sources and targets
-        source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
-        target_chat_raw = self.config_manager.get('forwarding', 'target_chat')
+                    # Load chat configurations - support multiple sources and targets
+                    source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
+                    target_chat_raw = self.config_manager.get('forwarding', 'target_chat')
         
         # Parse multiple sources (comma-separated)
-        if ',' in source_chat_raw:
+            if ',' in source_chat_raw:
             self.source_chats = [chat.strip() for chat in source_chat_raw.split(',') if chat.strip()]
         else:
             self.source_chats = [source_chat_raw.strip()]
             
         # Parse multiple targets (comma-separated)
-        if ',' in target_chat_raw:
+            if ',' in target_chat_raw:
             self.target_chats = [chat.strip() for chat in target_chat_raw.split(',') if chat.strip()]
         else:
-            self.target_chats = [target_chat_raw.strip()]
+        self.target_chats = [target_chat_raw.strip()]
         
         # Keep backward compatibility
         self.source_chat = self.source_chats[0]
         self.target_chat = self.target_chats[0]
-        
             # Load forwarding options including all media filters
             self.forward_options = {
                 'delay': self.config_manager.getfloat('forwarding', 'forward_delay', fallback=1.0),
