@@ -73,9 +73,8 @@ class TelegramForwarder:
             raise
             
             def _load_config(self):
-    """Load configuration settings"""
-    
-    try:
+                """Load configuration settings"""
+                try:
         # Load chat configurations - support multiple sources and targets
         source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
         target_chat_raw = self.config_manager.get('forwarding', 'target_chat')
