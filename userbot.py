@@ -145,12 +145,12 @@ class TelegramForwarder:
                 'multi_mode_enabled': self.config_manager.getboolean('forwarding', 'multi_mode_enabled', fallback=False)
             }
             
-            if not self.source_chat or not self.target_chat:
+        if not self.source_chat or not self.target_chat:
                 raise ValueError("Please configure source_chat and target_chat in config.ini")
                 
             self.logger.info(f"Configuration loaded - Source: {self.source_chat}, Target: {self.target_chat}")
             
-        except Exception as e:
+except Exception as e:
             self.logger.error(f"Failed to load configuration: {e}")
             raise
     
