@@ -8,6 +8,8 @@ import asyncio
 import logging
 import os
 import json
+from dotenv import load_dotenv
+load_dotenv()
 from aiohttp import web, ClientSession
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
