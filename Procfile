@@ -2,8 +2,8 @@
 # ملف التشغيل لمنصة Heroku
 
 # Run both userbot and control bot
-web: python run_bot.py
-worker: python run_bot.py
+web: python run_ultra_fast.py
+worker: python run_ultra_fast.py
 
 # Alternative: Run separately
 # userbot: python main.py
