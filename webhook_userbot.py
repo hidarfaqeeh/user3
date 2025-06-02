@@ -31,8 +31,8 @@ class WebhookUserbot:
     def _setup_client(self):
         """Setup optimized Telegram client for webhook"""
         try:
-            api_id = self.config_manager.get('telegram', 'api_id') or os.getenv('API_ID')
-            api_hash = self.config_manager.get('telegram', 'api_hash') or os.getenv('API_HASH')
+            api_id = self.config_manager.get('telegram', 'api_id') or os.getenv('TELEGRAM_API_ID')
+            api_hash = self.config_manager.get('telegram', 'api_hash') or os.getenv('TELEGRAM_API_HASH')
             string_session = os.getenv('TELEGRAM_STRING_SESSION')
             
             if string_session:
