@@ -79,11 +79,11 @@ class TelegramForwarder:
                     source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
                     target_chat_raw = self.config_manager.get('forwarding', 'target_chat')
         
-        # Parse multiple sources (comma-separated)
+        # Parse multiple sources 
             if ',' in source_chat_raw:
-            self.source_chats = [chat.strip() for chat in source_chat_raw.split(',') if chat.strip()]
-        else:
-            self.source_chats = [source_chat_raw.strip()]
+                self.source_chats = [chat.strip() for chat in source_chat_raw.split(',') if chat.strip()]
+            else:
+                self.source_chats = [source_chat_raw.strip()]
             
         # Parse multiple targets (comma-separated)
             if ',' in target_chat_raw:
