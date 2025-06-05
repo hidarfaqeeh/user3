@@ -109,7 +109,7 @@ class ModernControlBot:
              Button.inline("👀 عرض الإعدادات", b"view_settings")],
             *control_buttons,
             [Button.inline("📋 السجلات", b"logs"),
-             Button.inline("❓ مساعدة", b"help")]
+             Button.inline("❓ مطور البوت", b"help")]
         ]
     
     def get_settings_keyboard(self):
