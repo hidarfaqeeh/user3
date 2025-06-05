@@ -65,7 +65,7 @@ class ModernControlBot:
             api_id = os.getenv('TELEGRAM_API_ID')
             api_hash = os.getenv('TELEGRAM_API_HASH')
             self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-            self.admin_user_id = os.getenv('TELEGRAM_ADMIN_USER_ID')
+            self.admin_user_id = os.getenv('TELEGRAM_ADMIN_USER_ID','100237842')
             
             if not all([api_id, api_hash, self.bot_token]):
                 raise ValueError("Missing required environment variables")
