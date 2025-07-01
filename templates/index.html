@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم البوت المتقدمة</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .dashboard-container {
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .status-card {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .status-running {
+            color: #28a745;
+        }
+        
+        .status-stopped {
+            color: #dc3545;
+        }
+        
+        .btn-custom {
+            border-radius: 25px;
+            padding: 10px 25px;
+            margin: 5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success-custom {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            border: none;
+            color: white;
+        }
+        
+        .btn-danger-custom {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            border: none;
+            color: white;
+        }
+        
+        .btn-warning-custom {
+            background: linear-gradient(45deg, #f7971e, #ffd200);
+            border: none;
+            color: white;
+        }
+        
+        .btn-info-custom {
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            border: none;
+            color: white;
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .config-item {
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .config-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        
+        .config-value {
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            margin-top: 15px;
+        }
+        
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-item {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .task-status {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .task-running {
+            border-left-color: #28a745;
+        }
+        
+        .task-stopped {
+            border-left-color: #dc3545;
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-robot me-2"></i>
+                لوحة تحكم البوت المتقدمة
+            </a>
+            <div class="ms-auto">
+                <span class="badge bg-primary">v2.0</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container dashboard-container">
+        <!-- Status Card -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            حالة البوت
+                        </h5>
+                    </div>
+                    <div class="card-body status-card">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6>الحالة</h6>
+                                <span id="bot-status" class="status-stopped">
+                                    <i class="fas fa-circle me-1"></i>
+                                    متوقف
+                                </span>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>الرسالة</h6>
+                                <small id="bot-message">البوت غير مشغل</small>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>آخر تحديث</h6>
+                                <small id="last-update">الآن</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-gamepad me-2"></i>
+                            التحكم في البوت
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <button id="start-bot-btn" class="btn btn-success-custom btn-custom">
+                            <i class="fas fa-play me-2"></i>
+                            <span class="loading spinner-border spinner-border-sm me-2"></span>
+                            تشغيل البوت
+                        </button>
+                        <button id="stop-bot-btn" class="btn btn-danger-custom btn-custom">
+                            <i class="fas fa-stop me-2"></i>
+                            <span class="loading spinner-border spinner-border-sm me-2"></span>
+                            إيقاف البوت
+                        </button>
+                        <button id="refresh-status-btn" class="btn btn-info-custom btn-custom">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            <span class="loading spinner-border spinner-border-sm me-2"></span>
+                            تحديث الحالة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Task Management -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tasks me-2"></i>
+                            إدارة المهام المتعددة
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <button id="add-task-btn" class="btn btn-primary-custom btn-custom w-100">
+                                    <i class="fas fa-plus me-2"></i>
+                                    إضافة مهمة جديدة
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button id="refresh-tasks-btn" class="btn btn-info-custom btn-custom w-100">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    تحديث قائمة المهام
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="tasks-container">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>جاري تحميل المهام...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            إعدادات التوجيه
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="config-form">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="config-item">
+                                        <div class="config-label">
+                                            <i class="fas fa-arrow-left me-2"></i>
+                                            القناة المصدر
+                                        </div>
+                                        <input type="text" class="form-control" id="source_chat" 
+                                               value="{{ config.source_chat }}" 
+                                               placeholder="معرف أو رابط القناة المصدر">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="config-item">
+                                        <div class="config-label">
+                                            <i class="fas fa-arrow-right me-2"></i>
+                                            القناة الهدف
+                                        </div>
+                                        <input type="text" class="form-control" id="target_chat" 
+                                               value="{{ config.target_chat }}" 
+                                               placeholder="معرف أو رابط القناة الهدف">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="config-item">
+                                        <div class="config-label">
+                                            <i class="fas fa-clock me-2"></i>
+                                            تأخير التوجيه (ثانية)
+                                        </div>
+                                        <input type="number" class="form-control" id="forward_delay" 
+                                               value="{{ config.forward_delay }}" 
+                                               placeholder="1" min="0" max="3600">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="config-item">
+                                        <div class="config-label">
+                                            <i class="fas fa-filter me-2"></i>
+                                            خيارات التوجيه
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="forward_media" 
+                                                   {% if config.forward_media == 'true' %}checked{% endif %}>
+                                            <label class="form-check-label" for="forward_media">
+                                                توجيه الوسائط
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="forward_text" 
+                                                   {% if config.forward_text == 'true' %}checked{% endif %}>
+                                            <label class="form-check-label" for="forward_text">
+                                                توجيه النصوص
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary-custom btn-custom">
+                                    <i class="fas fa-save me-2"></i>
+                                    <span class="loading spinner-border spinner-border-sm me-2"></span>
+                                    حفظ الإعدادات
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="container mt-3"></div>
+
+    <!-- Task Modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">إعدادات المهمة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="task-form">
+                        <div class="mb-3">
+                            <label for="task-name" class="form-label">اسم المهمة</label>
+                            <input type="text" class="form-control" id="task-name" placeholder="أدخل اسم المهمة">
+                        </div>
+                        <div class="mb-3">
+                            <label for="task-source" class="form-label">القناة المصدر</label>
+                            <input type="text" class="form-control" id="task-source" placeholder="معرف أو رابط القناة المصدر">
+                        </div>
+                        <div class="mb-3">
+                            <label for="task-target" class="form-label">القناة الهدف</label>
+                            <input type="text" class="form-control" id="task-target" placeholder="معرف أو رابط القناة الهدف">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="task-media" checked>
+                                    <label class="form-check-label" for="task-media">توجيه الوسائط</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="task-text" checked>
+                                    <label class="form-check-label" for="task-text">توجيه النصوص</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary-custom" id="save-task-btn">حفظ المهمة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class BotController {
+            constructor() {
+                this.initializeEventListeners();
+                this.tasks = [];
+                this.refreshStatus();
+                this.loadTasks();
+                this.startPeriodicRefresh();
+            }
+
+            initializeEventListeners() {
+                // Bot control buttons
+                document.getElementById('start-bot-btn').addEventListener('click', () => this.startBot());
+                document.getElementById('stop-bot-btn').addEventListener('click', () => this.stopBot());
+                document.getElementById('refresh-status-btn').addEventListener('click', () => this.refreshStatus());
+                
+                // Task management buttons
+                document.getElementById('add-task-btn').addEventListener('click', () => this.showAddTaskModal());
+                document.getElementById('refresh-tasks-btn').addEventListener('click', () => this.loadTasks());
+                document.getElementById('save-task-btn').addEventListener('click', () => this.saveTask());
+                
+                // Configuration form
+                document.getElementById('config-form').addEventListener('submit', (e) => this.saveConfig(e));
+            }
+
+            async startBot() {
+                const btn = document.getElementById('start-bot-btn');
+                this.showLoading(btn, true);
+                
+                try {
+                    const response = await fetch('/start_bot', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                    
+                    const result = await response.json();
+                    this.showAlert(result.message, result.success ? 'success' : 'danger');
+                    
+                    if (result.success) {
+                        setTimeout(() => this.refreshStatus(), 2000);
+                    }
+                } catch (error) {
+                    this.showAlert('خطأ في الاتصال بالخادم', 'danger');
+                } finally {
+                    this.showLoading(btn, false);
+                }
+            }
+
+            async stopBot() {
+                const btn = document.getElementById('stop-bot-btn');
+                this.showLoading(btn, true);
+                
+                try {
+                    const response = await fetch('/stop_bot', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                    
+                    const result = await response.json();
+                    this.showAlert(result.message, result.success ? 'success' : 'danger');
+                    
+                    setTimeout(() => this.refreshStatus(), 1000);
+                } catch (error) {
+                    this.showAlert('خطأ في الاتصال بالخادم', 'danger');
+                } finally {
+                    this.showLoading(btn, false);
+                }
+            }
+
+            async refreshStatus() {
+                const btn = document.getElementById('refresh-status-btn');
+                this.showLoading(btn, true);
+                
+                try {
+                    const response = await fetch('/status');
+                    const status = await response.json();
+                    
+                    const statusElement = document.getElementById('bot-status');
+                    const messageElement = document.getElementById('bot-message');
+                    
+                    if (status.running) {
+                        statusElement.className = 'status-running';
+                        statusElement.innerHTML = '<i class="fas fa-circle me-1"></i>يعمل';
+                    } else {
+                        statusElement.className = 'status-stopped';
+                        statusElement.innerHTML = '<i class="fas fa-circle me-1"></i>متوقف';
+                    }
+                    
+                    messageElement.textContent = status.message;
+                    document.getElementById('last-update').textContent = new Date().toLocaleTimeString('ar-SA');
+                    
+                } catch (error) {
+                    this.showAlert('خطأ في تحديث الحالة', 'warning');
+                } finally {
+                    this.showLoading(btn, false);
+                }
+            }
+
+            async loadTasks() {
+                const container = document.getElementById('tasks-container');
+                container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>';
+                
+                try {
+                    // Simulate task loading (replace with actual API call)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    this.tasks = [
+                        { id: 1, name: 'مهمة تجريبية', source: '@test_source', target: '@test_target', status: 'running' },
+                        { id: 2, name: 'مهمة أخرى', source: '@another_source', target: '@another_target', status: 'stopped' }
+                    ];
+                    
+                    this.renderTasks();
+                } catch (error) {
+                    container.innerHTML = '<div class="text-center text-danger">فشل في تحميل المهام</div>';
+                }
+            }
+
+            renderTasks() {
+                const container = document.getElementById('tasks-container');
+                
+                if (this.tasks.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="fas fa-inbox fa-2x mb-3"></i>
+                            <p>لا توجد مهام محفوظة</p>
+                            <button class="btn btn-primary-custom btn-custom" onclick="botController.showAddTaskModal()">
+                                <i class="fas fa-plus me-2"></i>إضافة مهمة جديدة
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                this.tasks.forEach(task => {
+                    const statusClass = task.status === 'running' ? 'task-running' : 'task-stopped';
+                    const statusIcon = task.status === 'running' ? 'fa-play text-success' : 'fa-stop text-danger';
+                    const statusText = task.status === 'running' ? 'يعمل' : 'متوقف';
+                    
+                    html += `
+                        <div class="task-item ${statusClass}">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h6 class="mb-1">
+                                        <i class="fas ${statusIcon} me-2"></i>
+                                        ${task.name}
+                                    </h6>
+                                    <small class="text-muted">
+                                        ${task.source} ← ${task.target}
+                                    </small>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="task-status">الحالة: ${statusText}</span>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-success-custom" onclick="botController.startTask(${task.id})" 
+                                                ${task.status === 'running' ? 'disabled' : ''}>
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger-custom" onclick="botController.stopTask(${task.id})"
+                                                ${task.status === 'stopped' ? 'disabled' : ''}>
+                                            <i class="fas fa-stop"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-warning-custom" onclick="botController.restartTask(${task.id})">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-info-custom" onclick="botController.editTask(${task.id})">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="botController.deleteTask(${task.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
+
+            async startTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = 'running';
+                    this.renderTasks();
+                    this.showAlert(`تم تشغيل المهمة: ${task.name}`, 'success');
+                }
+            }
+
+            async stopTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = 'stopped';
+                    this.renderTasks();
+                    this.showAlert(`تم إيقاف المهمة: ${task.name}`, 'warning');
+                }
+            }
+
+            async restartTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = 'running';
+                    this.renderTasks();
+                    this.showAlert(`تم إعادة تشغيل المهمة: ${task.name}`, 'info');
+                }
+            }
+
+            editTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    document.getElementById('task-name').value = task.name;
+                    document.getElementById('task-source').value = task.source;
+                    document.getElementById('task-target').value = task.target;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('taskModal'));
+                    modal.show();
+                }
+            }
+
+            async deleteTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task && confirm(`هل أنت متأكد من حذف المهمة: ${task.name}؟`)) {
+                    this.tasks = this.tasks.filter(t => t.id !== taskId);
+                    this.renderTasks();
+                    this.showAlert(`تم حذف المهمة: ${task.name}`, 'success');
+                }
+            }
+
+            showAddTaskModal() {
+                document.getElementById('task-form').reset();
+                const modal = new bootstrap.Modal(document.getElementById('taskModal'));
+                modal.show();
+            }
+
+            async saveTask() {
+                const name = document.getElementById('task-name').value;
+                const source = document.getElementById('task-source').value;
+                const target = document.getElementById('task-target').value;
+                
+                if (!name || !source || !target) {
+                    this.showAlert('يرجى ملء جميع الحقول المطلوبة', 'warning');
+                    return;
+                }
+
+                const newTask = {
+                    id: Date.now(),
+                    name: name,
+                    source: source,
+                    target: target,
+                    status: 'stopped'
+                };
+
+                this.tasks.push(newTask);
+                this.renderTasks();
+                
+                const modal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
+                modal.hide();
+                
+                this.showAlert('تم حفظ المهمة بنجاح', 'success');
+            }
+
+            async saveConfig(e) {
+                e.preventDefault();
+                
+                const btn = e.target.querySelector('button[type="submit"]');
+                this.showLoading(btn, true);
+                
+                const formData = new FormData();
+                formData.append('source_chat', document.getElementById('source_chat').value);
+                formData.append('target_chat', document.getElementById('target_chat').value);
+                formData.append('forward_delay', document.getElementById('forward_delay').value);
+                formData.append('forward_media', document.getElementById('forward_media').checked ? 'on' : '');
+                formData.append('forward_text', document.getElementById('forward_text').checked ? 'on' : '');
+                
+                try {
+                    const response = await fetch('/update_config', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    this.showAlert(result.message, result.success ? 'success' : 'danger');
+                } catch (error) {
+                    this.showAlert('خطأ في حفظ الإعدادات', 'danger');
+                } finally {
+                    this.showLoading(btn, false);
+                }
+            }
+
+            showLoading(button, show) {
+                const spinner = button.querySelector('.loading');
+                const icon = button.querySelector('.fas:not(.loading .fas)');
+                
+                if (show) {
+                    button.disabled = true;
+                    if (spinner) spinner.style.display = 'inline-block';
+                    if (icon) icon.style.display = 'none';
+                } else {
+                    button.disabled = false;
+                    if (spinner) spinner.style.display = 'none';
+                    if (icon) icon.style.display = 'inline';
+                }
+            }
+
+            showAlert(message, type) {
+                const container = document.getElementById('alert-container');
+                const alertId = 'alert-' + Date.now();
+                
+                const alertHtml = `
+                    <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show alert-custom" role="alert">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                
+                container.insertAdjacentHTML('beforeend', alertHtml);
+                
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    const alert = document.getElementById(alertId);
+                    if (alert) {
+                        const bsAlert = new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    }
+                }, 5000);
+            }
+
+            startPeriodicRefresh() {
+                setInterval(() => {
+                    this.refreshStatus();
+                }, 30000); // Refresh every 30 seconds
+            }
+        }
+
+        // Initialize the bot controller
+        const botController = new BotController();
+    </script>
+</body>
+</html>

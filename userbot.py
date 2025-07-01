@@ -700,6 +700,10 @@ class TelegramForwarder:
                 }
         
         return stats
+
+    def get_task_config(self, task_id: str) -> Optional[SteeringTaskConfig]:
+        """Get configuration for a specific task"""
+        return self.task_configs.get(task_id)
     
     def _register_admin_handlers(self):
         """Register admin command handlers"""
