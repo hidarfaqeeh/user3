@@ -479,31 +479,39 @@ class SteeringTask:
 class TelegramForwarder:
     """Enhanced Telegram forwarder with concurrent task support"""
     
-    def __init__(self, config_path='config.ini'):
+    def __init__(self):
+        """Initialize TelegramForwarder"""
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler('userbot.log', encoding='utf-8'),
+                logging.StreamHandler()
+            ]
+        )
         self.logger = logging.getLogger(__name__)
-        self.config_manager = ConfigManager(config_path)
         
-        # Task management
-        self.steering_tasks: Dict[str, SteeringTask] = {}
-        self.task_configs: Dict[str, SteeringTaskConfig] = {}
-        
-        # Telegram client
+        # Core components
+        self.config = configparser.ConfigParser()
         self.client = None
+        self.is_running = False
         
-        # Legacy support
-        self.source_chat = None
-        self.target_chat = None
-        self.forward_options = {}
+        # Multi-task system
+        self.steering_tasks = {}  # Dict of task_id -> SteeringTask
+        self.task_stats = {}      # Dict of task_id -> TaskStats
         
-        self._setup_client()
+        # Load configuration and tasks
         self._load_config()
         self._load_steering_tasks()
+        
+        # Initialize Telegram client
+        self._setup_client()
     
     def _setup_client(self):
         """Setup Telegram client with credentials"""
         try:
-            api_id = os.getenv('TELEGRAM_API_ID') or self.config_manager.get('telegram', 'api_id')
-            api_hash = os.getenv('TELEGRAM_API_HASH') or self.config_manager.get('telegram', 'api_hash')
+            api_id = os.getenv('TELEGRAM_API_ID') or self.config.get('telegram', 'api_id')
+            api_hash = os.getenv('TELEGRAM_API_HASH') or self.config.get('telegram', 'api_hash')
             
             if not api_id or not api_hash or api_id == 'YOUR_API_ID':
                 raise ValueError("Please set TELEGRAM_API_ID and TELEGRAM_API_HASH environment variables or update config.ini")
@@ -526,98 +534,183 @@ class TelegramForwarder:
             raise
     
     def _load_config(self):
-        """Load legacy configuration for backward compatibility"""
+        """Load configuration from config.ini"""
         try:
-            source_chat_raw = self.config_manager.get('forwarding', 'source_chat')
-            target_chat_raw = self.config_manager.get('forwarding', 'target_chat')
+            self.config.read('config.ini')
+            
+            # Ensure sections exist
+            if not self.config.has_section('telegram'):
+                self.config.add_section('telegram')
+            if not self.config.has_section('forwarding'):
+                self.config.add_section('forwarding')
+            
+            # Load legacy configuration
+            source_chat_raw = self.config.get('forwarding', 'source_chat', fallback='')
+            target_chat_raw = self.config.get('forwarding', 'target_chat', fallback='')
 
             if ',' in source_chat_raw:
                 self.source_chats = [chat.strip() for chat in source_chat_raw.split(',') if chat.strip()]
             else:
                 self.source_chats = [source_chat_raw.strip()] if source_chat_raw.strip() else []
-            
+
             if ',' in target_chat_raw:
                 self.target_chats = [chat.strip() for chat in target_chat_raw.split(',') if chat.strip()]
             else:
                 self.target_chats = [target_chat_raw.strip()] if target_chat_raw.strip() else []
             
+            # Store first as primary
             self.source_chat = self.source_chats[0] if self.source_chats else None
             self.target_chat = self.target_chats[0] if self.target_chats else None
             
             # Load other options for legacy compatibility
             self.forward_options = {
-                'delay': self.config_manager.getfloat('forwarding', 'forward_delay', fallback=1.0),
-                'max_retries': self.config_manager.getint('forwarding', 'max_retries', fallback=3),
-                'forward_mode': self.config_manager.get('forwarding', 'forward_mode', fallback='forward'),
-                'multi_mode_enabled': self.config_manager.getboolean('forwarding', 'multi_mode_enabled', fallback=False)
+                'delay': self.config.getfloat('forwarding', 'forward_delay', fallback=1.0),
+                'max_retries': self.config.getint('forwarding', 'max_retries', fallback=3),
+                'forward_mode': self.config.get('forwarding', 'forward_mode', fallback='forward'),
+                'multi_mode_enabled': self.config.getboolean('forwarding', 'multi_mode_enabled', fallback=False)
             }
             
+            self.logger.info("Configuration loaded successfully")
+            
         except Exception as e:
-            self.logger.warning(f"Legacy config loading failed: {e}")
+            self.logger.error(f"Failed to load configuration: {e}")
+            # Set defaults
+            self.source_chat = None
+            self.target_chat = None
+            self.forward_options = {
+                'delay': 1.0,
+                'max_retries': 3,
+                'forward_mode': 'forward',
+                'multi_mode_enabled': False
+            }
     
     def _load_steering_tasks(self):
-        """Load steering tasks from configuration"""
+        """Load steering tasks from JSON file"""
         try:
-            # Try to load from tasks.json file
+            import os
+            import json
+            
             if os.path.exists('steering_tasks.json'):
                 with open('steering_tasks.json', 'r', encoding='utf-8') as f:
                     tasks_data = json.load(f)
                     for task_data in tasks_data:
-                        config = SteeringTaskConfig(**task_data)
-                        self.task_configs[config.task_id] = config
+                        if task_data.get('enabled', False):  # Only load enabled tasks
+                            try:
+                                config = SteeringTaskConfig(**task_data)
+                                task_id = config.task_id
+                                
+                                # Create task instance but don't start it yet
+                                self.steering_tasks[task_id] = None  # Will be created when client is ready
+                                self.task_stats[task_id] = {
+                                    'config': config,
+                                    'name': config.name,
+                                    'status': 'ready',
+                                    'source_chat': config.source_chat,
+                                    'target_chat': config.target_chat,
+                                    'stats': None
+                                }
+                            except Exception as e:
+                                self.logger.error(f"Failed to load task {task_data.get('name', 'Unknown')}: {e}")
             else:
                 # Create default task from legacy config if available
                 if self.source_chat and self.target_chat:
                     default_config = self._create_default_task_config()
-                    self.task_configs[default_config.task_id] = default_config
+                    task_id = default_config.task_id
+                    self.steering_tasks[task_id] = None
+                    self.task_stats[task_id] = {
+                        'config': default_config,
+                        'name': default_config.name,
+                        'status': 'ready',
+                        'source_chat': default_config.source_chat,
+                        'target_chat': default_config.target_chat,
+                        'stats': None
+                    }
                     self._save_steering_tasks()
             
-            self.logger.info(f"Loaded {len(self.task_configs)} steering task configurations")
+            self.logger.info(f"Loaded {len(self.steering_tasks)} steering task configurations")
             
         except Exception as e:
             self.logger.error(f"Failed to load steering tasks: {e}")
     
-    def _create_default_task_config(self) -> SteeringTaskConfig:
-        """Create default task config from legacy settings"""
-        return SteeringTaskConfig(
-            task_id="default_task",
-            name="Default Task",
-            source_chat=self.source_chat,
-            target_chat=self.target_chat,
-            forward_delay=self.forward_options.get('delay', 1.0),
-            max_retries=self.forward_options.get('max_retries', 3),
-            forward_mode=self.forward_options.get('forward_mode', 'copy')
-        )
-    
     def _save_steering_tasks(self):
         """Save steering tasks to JSON file"""
         try:
-            tasks_data = [asdict(config) for config in self.task_configs.values()]
+            import json
+            from dataclasses import asdict
+            
+            tasks_data = []
+            for task_stats in self.task_stats.values():
+                if 'config' in task_stats:
+                    tasks_data.append(asdict(task_stats['config']))
+            
             with open('steering_tasks.json', 'w', encoding='utf-8') as f:
                 json.dump(tasks_data, f, indent=2, ensure_ascii=False)
+                
         except Exception as e:
             self.logger.error(f"Failed to save steering tasks: {e}")
+    
+    def _create_default_task_config(self) -> SteeringTaskConfig:
+        """Create default task configuration from legacy settings"""
+        import time
+        import uuid
+        
+        task_id = f"legacy_task_{int(time.time())}"
+        
+        return SteeringTaskConfig(
+            task_id=task_id,
+            name="المهمة الأساسية",
+            source_chat=self.source_chat,
+            target_chat=self.target_chat,
+            enabled=True,
+            forward_delay=self.forward_options.get('delay', 1.0),
+            max_retries=self.forward_options.get('max_retries', 3),
+            forward_mode=self.forward_options.get('forward_mode', 'forward')
+        )
     
     async def start(self):
         """Start the userbot and all enabled steering tasks"""
         try:
             await self.client.start()
+            self.is_running = True
+            self.logger.info("✅ Telegram client connected successfully")
             
-            me = await self.client.get_me()
-            self.logger.info(f"Logged in as: {me.first_name} {me.last_name or ''} (@{me.username or 'N/A'})")
-            
-            # Register admin commands
-            self._register_admin_handlers()
+            # Create task instances now that client is ready
+            created_tasks = 0
+            for task_id, task_info in self.task_stats.items():
+                if task_info and 'config' in task_info:
+                    config = task_info['config']
+                    try:
+                        task = SteeringTask(config, self.client, self.logger)
+                        self.steering_tasks[task_id] = task
+                        created_tasks += 1
+                        self.logger.info(f"Created task: {config.name}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to create task {config.name}: {e}")
             
             # Start all enabled steering tasks
             started_tasks = 0
-            for config in self.task_configs.values():
-                if config.enabled:
-                    success = await self.start_steering_task(config.task_id)
-                    if success:
-                        started_tasks += 1
+            for task_id, task in self.steering_tasks.items():
+                if task and task.config.enabled:
+                    try:
+                        success = await task.start()
+                        if success:
+                            started_tasks += 1
+                            self.task_stats[task_id]['status'] = 'running'
+                            self.task_stats[task_id]['stats'] = task.stats
+                            self.logger.info(f"Started task: {task.config.name}")
+                        else:
+                            self.task_stats[task_id]['status'] = 'failed'
+                    except Exception as e:
+                        self.logger.error(f"Failed to start task {task.config.name}: {e}")
+                        self.task_stats[task_id]['status'] = 'failed'
             
-            self.logger.info(f"✅ Userbot started with {started_tasks}/{len(self.task_configs)} steering tasks")
+            # If no steering tasks, set up legacy mode
+            if started_tasks == 0 and self.source_chat and self.target_chat:
+                self.logger.info("No steering tasks found, starting legacy mode")
+                self.client.add_event_handler(self._handle_new_message, events.NewMessage(chats=self.source_chats))
+                self.logger.info(f"✅ Legacy mode - monitoring {len(self.source_chats)} source(s) -> {len(self.target_chats)} target(s)")
+            
+            self.logger.info(f"✅ Userbot started with {started_tasks}/{len(self.steering_tasks)} steering tasks")
             
         except Exception as e:
             self.logger.error(f"Failed to start userbot: {e}")
@@ -625,79 +718,110 @@ class TelegramForwarder:
     
     async def start_steering_task(self, task_id: str) -> bool:
         """Start a specific steering task"""
-        if task_id not in self.task_configs:
+        if task_id not in self.task_stats:
             self.logger.error(f"Task {task_id} not found")
             return False
         
-        if task_id in self.steering_tasks:
+        if task_id in self.steering_tasks and self.steering_tasks[task_id]:
             self.logger.warning(f"Task {task_id} is already running")
             return False
         
-        config = self.task_configs[task_id]
-        task = SteeringTask(config, self.client, self.logger)
-        
-        success = await task.start()
-        if success:
-            self.steering_tasks[task_id] = task
-        
-        return success
+        try:
+            config = self.task_stats[task_id]['config']
+            task = SteeringTask(config, self.client, self.logger)
+            
+            success = await task.start()
+            if success:
+                self.steering_tasks[task_id] = task
+                self.task_stats[task_id]['status'] = 'running'
+                self.task_stats[task_id]['stats'] = task.stats
+                self.logger.info(f"Started steering task: {config.name}")
+            else:
+                self.task_stats[task_id]['status'] = 'failed'
+            
+            return success
+        except Exception as e:
+            self.logger.error(f"Failed to start task {task_id}: {e}")
+            self.task_stats[task_id]['status'] = 'failed'
+            return False
     
     async def stop_steering_task(self, task_id: str) -> bool:
         """Stop a specific steering task"""
-        if task_id not in self.steering_tasks:
+        if task_id not in self.steering_tasks or not self.steering_tasks[task_id]:
             self.logger.warning(f"Task {task_id} is not running")
             return False
         
-        task = self.steering_tasks[task_id]
-        await task.stop()
-        del self.steering_tasks[task_id]
-        
-        return True
-    
-    async def restart_steering_task(self, task_id: str) -> bool:
-        """Restart a specific steering task"""
-        await self.stop_steering_task(task_id)
-        return await self.start_steering_task(task_id)
+        try:
+            task = self.steering_tasks[task_id]
+            await task.stop()
+            
+            self.steering_tasks[task_id] = None
+            self.task_stats[task_id]['status'] = 'stopped'
+            self.task_stats[task_id]['stats'] = None
+            
+            self.logger.info(f"Stopped steering task: {task.config.name}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to stop task {task_id}: {e}")
+            return False
     
     def add_steering_task(self, config: SteeringTaskConfig):
         """Add a new steering task configuration"""
-        self.task_configs[config.task_id] = config
+        task_id = config.task_id
+        
+        # Add to task stats
+        self.task_stats[task_id] = {
+            'config': config,
+            'name': config.name,
+            'status': 'ready',
+            'source_chat': config.source_chat,
+            'target_chat': config.target_chat,
+            'stats': None
+        }
+        
+        # Create task instance if client is available
+        if self.client:
+            try:
+                task = SteeringTask(config, self.client, self.logger)
+                self.steering_tasks[task_id] = task
+            except Exception as e:
+                self.logger.error(f"Failed to create task {config.name}: {e}")
+                self.steering_tasks[task_id] = None
+        else:
+            self.steering_tasks[task_id] = None
+        
         self._save_steering_tasks()
         self.logger.info(f"Added steering task: {config.name}")
     
     def remove_steering_task(self, task_id: str):
-        """Remove a steering task configuration"""
-        if task_id in self.steering_tasks:
+        """Remove a steering task"""
+        if task_id in self.steering_tasks and self.steering_tasks[task_id]:
             asyncio.create_task(self.stop_steering_task(task_id))
         
-        if task_id in self.task_configs:
-            del self.task_configs[task_id]
-            self._save_steering_tasks()
-            self.logger.info(f"Removed steering task: {task_id}")
+        if task_id in self.steering_tasks:
+            del self.steering_tasks[task_id]
+        
+        if task_id in self.task_stats:
+            del self.task_stats[task_id]
+            
+        self._save_steering_tasks()
+        self.logger.info(f"Removed steering task: {task_id}")
     
     def get_task_stats(self) -> Dict[str, Dict]:
         """Get statistics for all tasks"""
         stats = {}
-        for task_id, task in self.steering_tasks.items():
-            config = self.task_configs[task_id]
+        
+        for task_id, task_info in self.task_stats.items():
+            config = task_info['config']
+            task = self.steering_tasks.get(task_id)
+            
             stats[task_id] = {
                 'name': config.name,
-                'status': 'running' if task.is_running else 'stopped',
+                'status': task_info['status'],
                 'source_chat': config.source_chat,
                 'target_chat': config.target_chat,
-                'stats': asdict(task.stats)
+                'stats': task_info['stats'].__dict__ if task_info['stats'] else None
             }
-        
-        # Add stopped tasks
-        for task_id, config in self.task_configs.items():
-            if task_id not in stats:
-                stats[task_id] = {
-                    'name': config.name,
-                    'status': 'stopped',
-                    'source_chat': config.source_chat,
-                    'target_chat': config.target_chat,
-                    'stats': None
-                }
         
         return stats
     

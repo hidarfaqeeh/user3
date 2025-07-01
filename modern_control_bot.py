@@ -385,6 +385,24 @@ class ModernControlBot:
                 await self.show_task_stats(event)
             elif data == "add_task":
                 await self.prompt_add_task(event)
+            elif data == "manage_tasks":
+                await self.manage_tasks(event)
+            elif data == "refresh_tasks":
+                await self.refresh_tasks(event)
+            elif data == "export_config":
+                await self.export_config(event)
+            elif data == "enable_all_tasks":
+                await self.enable_all_tasks(event)
+            elif data == "disable_all_tasks":
+                await self.disable_all_tasks(event)
+            elif data == "delete_all_tasks":
+                await self.delete_all_tasks(event)
+            elif data == "confirm_delete_all":
+                await self.confirm_delete_all_tasks(event)
+            elif data == "reload_tasks":
+                await self.reload_tasks(event)
+            elif data == "repair_tasks_file":
+                await self.repair_tasks_file(event)
             
             # Advanced settings callbacks
             elif data == "set_delay":
@@ -2455,61 +2473,71 @@ class ModernControlBot:
         return [
             [Button.inline("📋 عرض المهام", b"view_tasks"),
              Button.inline("➕ إضافة مهمة", b"add_task")],
-            [Button.inline("▶️ تشغيل مهمة", b"start_task"),
-             Button.inline("⏹️ إيقاف مهمة", b"stop_task")],
-            [Button.inline("🔄 إعادة تشغيل مهمة", b"restart_task"),
-             Button.inline("🗑️ حذف مهمة", b"delete_task")],
             [Button.inline("📊 إحصائيات المهام", b"task_stats"),
-             Button.inline("⚙️ إعدادات المهمة", b"edit_task")],
+             Button.inline("⚙️ إدارة المهام", b"manage_tasks")],
+            [Button.inline("🔄 تحديث الملفات", b"refresh_tasks"),
+             Button.inline("📤 تصدير الإعدادات", b"export_config")],
             [Button.inline("🏠 القائمة الرئيسية", b"main_menu")]
         ]
     
     async def show_multi_task_menu(self, event):
         """Show multi-task management menu"""
         try:
-            # Get task statistics from userbot if available
-            if self.forwarder_instance:
-                task_stats = self.forwarder_instance.get_task_stats()
-                total_tasks = len(task_stats)
-                running_tasks = sum(1 for t in task_stats.values() if t['status'] == 'running')
-                
-                text = (
-                    "🎯 **إدارة المهام المتعددة**\n\n"
-                    f"📊 **إحصائيات سريعة:**\n"
-                    f"• المهام الإجمالية: {total_tasks}\n"
-                    f"• المهام النشطة: {running_tasks}\n"
-                    f"• المهام المتوقفة: {total_tasks - running_tasks}\n\n"
-                    "⚡ **الوظائف المتاحة:**\n"
-                    "• إدارة مهام التوجيه\n"
-                    "• مراقبة الأداء\n"
-                    "• إعدادات فردية لكل مهمة"
-                )
-            else:
-                text = (
-                    "🎯 **إدارة المهام المتعددة**\n\n"
-                    "⚠️ **البوت الأساسي غير متصل**\n\n"
-                    "💡 يمكنك إعداد المهام، ولكن لن تعمل حتى يتم تشغيل البوت الأساسي"
-                )
+            # Try to load tasks from JSON file directly
+            tasks_data = self._load_tasks_from_file()
+            total_tasks = len(tasks_data)
+            
+            # Since we can't access forwarder instance directly on Northflank,
+            # we'll manage tasks through file system
+            text = (
+                "🎯 **إدارة المهام المتعددة**\n\n"
+                f"📊 **إحصائيات سريعة:**\n"
+                f"• المهام الإجمالية: {total_tasks}\n"
+                f"• الوضع: وضع ملف منفصل\n\n"
+                "⚡ **الوظائف المتاحة:**\n"
+                "• إدارة مهام التوجيه\n"
+                "• إعداد المهام المتعددة\n"
+                "• تحديث إعدادات المهام\n\n"
+                "💡 **ملاحظة:** تحتاج لإعادة تشغيل البوت الأساسي لتطبيق التغييرات"
+            )
             
             await event.edit(text, buttons=self.get_multi_task_menu_keyboard())
             
         except Exception as e:
             await event.edit(f"❌ خطأ في عرض قائمة المهام: {e}")
     
-    async def view_tasks(self, event):
-        """View all steering tasks"""
+    def _load_tasks_from_file(self):
+        """Load tasks directly from JSON file"""
         try:
-            if not self.forwarder_instance:
-                await event.edit(
-                    "❌ **البوت الأساسي غير متصل**\n\n"
-                    "يرجى تشغيل البوت الأساسي أولاً لعرض المهام",
-                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
-                )
-                return
+            import json
+            import os
             
-            task_stats = self.forwarder_instance.get_task_stats()
+            if os.path.exists('steering_tasks.json'):
+                with open('steering_tasks.json', 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                return []
+        except Exception as e:
+            self.logger.error(f"Error loading tasks from file: {e}")
+            return []
+    
+    def _save_tasks_to_file(self, tasks_data):
+        """Save tasks directly to JSON file"""
+        try:
+            import json
+            with open('steering_tasks.json', 'w', encoding='utf-8') as f:
+                json.dump(tasks_data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving tasks to file: {e}")
+            return False
+    
+    async def view_tasks(self, event):
+        """View all steering tasks from file"""
+        try:
+            tasks_data = self._load_tasks_from_file()
             
-            if not task_stats:
+            if not tasks_data:
                 text = (
                     "📋 **قائمة المهام**\n\n"
                     "🔍 **لا توجد مهام محددة**\n\n"
@@ -2518,23 +2546,18 @@ class ModernControlBot:
             else:
                 text = "📋 **قائمة مهام التوجيه**\n\n"
                 
-                for task_id, stats in task_stats.items():
-                    status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
-                    text += f"{status_emoji} **{stats['name']}**\n"
-                    text += f"   📥 من: `{stats['source_chat']}`\n"
-                    text += f"   📤 إلى: `{stats['target_chat']}`\n"
-                    
-                    if stats['stats']:
-                        task_data = stats['stats']
-                        text += f"   📊 معالج: {task_data['messages_processed']}\n"
-                        text += f"   ✅ موجه: {task_data['messages_forwarded']}\n"
-                        text += f"   ❌ فشل: {task_data['messages_failed']}\n"
-                    
+                for i, task in enumerate(tasks_data, 1):
+                    status_emoji = "✅" if task.get('enabled', False) else "⏸️"
+                    text += f"{status_emoji} **{task.get('name', f'مهمة {i}')}**\n"
+                    text += f"   📥 من: `{task.get('source_chat', 'غير محدد')}`\n"
+                    text += f"   📤 إلى: `{task.get('target_chat', 'غير محدد')}`\n"
+                    text += f"   ⚙️ الوضع: {task.get('forward_mode', 'copy')}\n"
+                    text += f"   🎛️ فلاتر: {self._get_filter_summary(task)}\n"
                     text += "\n"
             
             keyboard = [
                 [Button.inline("➕ إضافة مهمة", b"add_task"),
-                 Button.inline("📊 إحصائيات تفصيلية", b"task_stats")],
+                 Button.inline("⚙️ إدارة المهام", b"manage_tasks")],
                 [Button.inline("🔙 العودة", b"multi_task_menu")]
             ]
             
@@ -2543,73 +2566,206 @@ class ModernControlBot:
         except Exception as e:
             await event.edit(f"❌ خطأ في عرض المهام: {e}")
     
+    def _get_filter_summary(self, task):
+        """Get a summary of enabled filters for a task"""
+        filters = []
+        if task.get('forward_text', True):
+            filters.append("نص")
+        if task.get('forward_photos', True):
+            filters.append("صور")
+        if task.get('forward_videos', True):
+            filters.append("فيديو")
+        if task.get('forward_files', True):
+            filters.append("ملفات")
+        
+        return ", ".join(filters[:3]) + ("..." if len(filters) > 3 else "")
+    
     async def show_task_stats(self, event):
-        """Show detailed task statistics"""
+        """Show task statistics from file"""
         try:
-            if not self.forwarder_instance:
-                await event.edit(
-                    "❌ **البوت الأساسي غير متصل**",
-                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
-                )
-                return
+            tasks_data = self._load_tasks_from_file()
             
-            task_stats = self.forwarder_instance.get_task_stats()
-            
-            if not task_stats:
+            if not tasks_data:
                 text = "📊 **لا توجد مهام للإحصائيات**"
             else:
-                text = "📊 **إحصائيات مفصلة للمهام**\n\n"
+                text = "📊 **إحصائيات المهام**\n\n"
                 
-                total_processed = 0
-                total_forwarded = 0
-                total_failed = 0
+                enabled_tasks = sum(1 for task in tasks_data if task.get('enabled', False))
+                total_tasks = len(tasks_data)
                 
-                for task_id, stats in task_stats.items():
-                    if stats['stats']:
-                        task_data = stats['stats']
-                        total_processed += task_data['messages_processed']
-                        total_forwarded += task_data['messages_forwarded']
-                        total_failed += task_data['messages_failed']
+                text += f"🎯 **الإحصائيات العامة:**\n"
+                text += f"📝 إجمالي المهام: {total_tasks}\n"
+                text += f"✅ المهام المفعلة: {enabled_tasks}\n"
+                text += f"⏸️ المهام المعطلة: {total_tasks - enabled_tasks}\n\n"
                 
-                success_rate = (total_forwarded / total_processed * 100) if total_processed > 0 else 0
+                text += "📋 **تفاصيل المهام:**\n\n"
                 
-                text += f"🎯 **الإحصائيات الإجمالية:**\n"
-                text += f"📝 الرسائل المعالجة: {total_processed}\n"
-                text += f"✅ الرسائل الموجهة: {total_forwarded}\n"
-                text += f"❌ الرسائل الفاشلة: {total_failed}\n"
-                text += f"📈 معدل النجاح: {success_rate:.1f}%\n\n"
-                
-                text += "📋 **تفاصيل كل مهمة:**\n\n"
-                
-                for task_id, stats in task_stats.items():
-                    status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
-                    text += f"{status_emoji} **{stats['name']}**\n"
+                for i, task in enumerate(tasks_data, 1):
+                    status_emoji = "✅" if task.get('enabled', False) else "⏸️"
+                    text += f"{status_emoji} **{task.get('name', f'مهمة {i}')}**\n"
+                    text += f"   🔄 الوضع: {task.get('forward_mode', 'copy')}\n"
+                    text += f"   ⏱️ التأخير: {task.get('forward_delay', 1.0)}s\n"
+                    text += f"   🔁 المحاولات: {task.get('max_retries', 3)}\n"
                     
-                    if stats['stats']:
-                        task_data = stats['stats']
-                        task_success_rate = (task_data['messages_forwarded'] / task_data['messages_processed'] * 100) if task_data['messages_processed'] > 0 else 0
-                        text += f"   📊 معدل النجاح: {task_success_rate:.1f}%\n"
-                        text += f"   📝 معالج: {task_data['messages_processed']}\n"
-                        text += f"   ✅ موجه: {task_data['messages_forwarded']}\n"
-                        text += f"   ❌ فشل: {task_data['messages_failed']}\n"
-                        
-                        if task_data['last_activity']:
-                            from datetime import datetime
-                            last_activity = datetime.fromisoformat(task_data['last_activity']).strftime("%H:%M:%S")
-                            text += f"   🕒 آخر نشاط: {last_activity}\n"
-                    else:
-                        text += "   📊 لا توجد إحصائيات (متوقف)\n"
+                    # Show enabled features
+                    features = []
+                    if task.get('blacklist_enabled', False):
+                        features.append("🚫 حظر")
+                    if task.get('whitelist_enabled', False):
+                        features.append("✅ سماح")
+                    if task.get('header_enabled', False):
+                        features.append("📄 رأس")
+                    if task.get('footer_enabled', False):
+                        features.append("📄 تذييل")
+                    if task.get('clean_links', False):
+                        features.append("🧹 تنظيف")
+                    
+                    if features:
+                        text += f"   🎛️ المميزات: {', '.join(features)}\n"
                     
                     text += "\n"
             
-            keyboard = [[Button.inline("🔄 تحديث", b"task_stats"),
-                        Button.inline("🔙 العودة", b"multi_task_menu")]]
+            keyboard = [
+                [Button.inline("🔄 تحديث", b"task_stats"),
+                 Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("🔙 العودة", b"multi_task_menu")]
+            ]
             
             await event.edit(text, buttons=keyboard)
             
         except Exception as e:
             await event.edit(f"❌ خطأ في عرض الإحصائيات: {e}")
     
+    async def create_new_task(self, event, user_id):
+        """Create a new steering task and save to file"""
+        try:
+            task_data = self.temp_task_data[user_id]
+            
+            # Generate unique task ID
+            import time
+            import uuid
+            task_id = f"task_{int(time.time())}_{str(uuid.uuid4())[:8]}"
+            
+            # Create task configuration
+            new_task = {
+                "task_id": task_id,
+                "name": task_data['name'],
+                "source_chat": task_data['source_chat'],
+                "target_chat": task_data['target_chat'],
+                "enabled": True,
+                "forward_delay": 1.0,
+                "max_retries": 3,
+                "forward_mode": "copy",
+                "forward_text": True,
+                "forward_photos": True,
+                "forward_videos": True,
+                "forward_music": True,
+                "forward_audio": True,
+                "forward_voice": True,
+                "forward_video_messages": True,
+                "forward_files": True,
+                "forward_links": True,
+                "forward_gifs": True,
+                "forward_contacts": True,
+                "forward_locations": True,
+                "forward_polls": True,
+                "forward_stickers": True,
+                "forward_round": True,
+                "forward_games": True,
+                "header_enabled": False,
+                "footer_enabled": False,
+                "header_text": "",
+                "footer_text": "",
+                "blacklist_enabled": False,
+                "whitelist_enabled": False,
+                "blacklist_words": "",
+                "whitelist_words": "",
+                "clean_links": False,
+                "clean_buttons": False,
+                "clean_hashtags": False,
+                "clean_formatting": False,
+                "clean_empty_lines": False,
+                "clean_lines_with_words": False,
+                "clean_words_list": "",
+                "buttons_enabled": False,
+                "button1_text": "",
+                "button1_url": "",
+                "button2_text": "",
+                "button2_url": "",
+                "button3_text": "",
+                "button3_url": "",
+                "replacer_enabled": False,
+                "replacements": ""
+            }
+            
+            # Load existing tasks and add new one
+            tasks_data = self._load_tasks_from_file()
+            tasks_data.append(new_task)
+            
+            # Save to file
+            if self._save_tasks_to_file(tasks_data):
+                status_text = "✅ تم إنشاء المهمة وحفظها في الملف"
+                
+                # Also update config.ini for backward compatibility
+                await self._update_config_with_task(new_task)
+            else:
+                status_text = "⚠️ تم إنشاء المهمة ولكن فشل في الحفظ"
+            
+            # Clean up
+            del self.temp_task_data[user_id]
+            del self.user_states[user_id]
+            
+            # Show success message
+            text = (
+                f"🎉 **{status_text}**\n\n"
+                f"📝 **اسم المهمة:** {task_data['name']}\n"
+                f"📥 **المصدر:** `{task_data['source_chat']}`\n"
+                f"📤 **الهدف:** `{task_data['target_chat']}`\n"
+                f"🆔 **معرف المهمة:** `{task_id}`\n\n"
+                "💡 **ملاحظة مهمة:**\n"
+                "لتفعيل المهمة، تحتاج لإعادة تشغيل البوت الأساسي\n"
+                "أو استخدام الكود المُحدث الذي يدعم المهام المتعددة"
+            )
+            
+            keyboard = [
+                [Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("➕ إضافة مهمة أخرى", b"add_task")],
+                [Button.inline("🔙 إدارة المهام", b"multi_task_menu")]
+            ]
+            
+            await event.respond(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.respond(f"❌ خطأ في إنشاء المهمة: {e}")
+            if user_id in self.user_states:
+                del self.user_states[user_id]
+    
+    async def _update_config_with_task(self, task):
+        """Update config.ini with the new task for backward compatibility"""
+        try:
+            config = await self.get_current_config()
+            
+            # Update the first task as the default in config.ini
+            if not config.get('forwarding', 'source_chat', fallback='').strip():
+                await self.update_config('source_chat', task['source_chat'])
+                await self.update_config('target_chat', task['target_chat'])
+                await self.update_config('forward_mode', task['forward_mode'])
+                await self.update_config('forward_delay', str(task['forward_delay']))
+                
+                self.logger.info(f"Updated config.ini with task: {task['name']}")
+            
+        except Exception as e:
+            self.logger.error(f"Error updating config with task: {e}")
+    
+    async def set_forwarder_instance(self, forwarder):
+        """Set reference to the forwarder instance"""
+        self.forwarder_instance = forwarder
+        self.logger.info("Forwarder instance connected to control bot")
+
+    async def run_until_disconnected(self):
+        """Keep the bot running"""
+        await self.client.run_until_disconnected()
+
     async def prompt_add_task(self, event):
         """Prompt user to add a new task"""
         self.user_states[event.sender_id] = "waiting_task_name"
@@ -2686,70 +2842,300 @@ class ModernControlBot:
             if user_id in self.user_states:
                 del self.user_states[user_id]
     
-    async def create_new_task(self, event, user_id):
-        """Create a new steering task"""
+    async def manage_tasks(self, event):
+        """Show task management options"""
         try:
-            task_data = self.temp_task_data[user_id]
+            tasks_data = self._load_tasks_from_file()
             
-            # Generate unique task ID
-            import time
-            import uuid
-            task_id = f"task_{int(time.time())}_{str(uuid.uuid4())[:8]}"
-            
-            # Create task configuration
-            from userbot import SteeringTaskConfig
-            config = SteeringTaskConfig(
-                task_id=task_id,
-                name=task_data['name'],
-                source_chat=task_data['source_chat'],
-                target_chat=task_data['target_chat'],
-                enabled=True
-            )
-            
-            # Add task to forwarder if available
-            if self.forwarder_instance:
-                self.forwarder_instance.add_steering_task(config)
-                
-                # Try to start the task
-                success = await self.forwarder_instance.start_steering_task(task_id)
-                status_text = "✅ تم إنشاء وتشغيل المهمة" if success else "⚠️ تم إنشاء المهمة ولكن فشل في التشغيل"
+            if not tasks_data:
+                text = (
+                    "⚙️ **إدارة المهام**\n\n"
+                    "🔍 **لا توجد مهام للإدارة**\n\n"
+                    "💡 أضف مهمة أولاً لتتمكن من إدارتها"
+                )
+                keyboard = [
+                    [Button.inline("➕ إضافة مهمة", b"add_task")],
+                    [Button.inline("🔙 العودة", b"multi_task_menu")]
+                ]
             else:
-                status_text = "✅ تم إنشاء المهمة (ستعمل عند تشغيل البوت الأساسي)"
+                text = (
+                    "⚙️ **إدارة المهام**\n\n"
+                    f"📊 **إجمالي المهام:** {len(tasks_data)}\n\n"
+                    "🔧 **الوظائف المتاحة:**\n"
+                    "• تفعيل/تعطيل المهام\n"
+                    "• حذف المهام\n"
+                    "• تحديث الإعدادات\n"
+                    "• إعادة تحميل المهام"
+                )
+                
+                keyboard = [
+                    [Button.inline("✅ تفعيل الكل", b"enable_all_tasks"),
+                     Button.inline("⏸️ تعطيل الكل", b"disable_all_tasks")],
+                    [Button.inline("🗑️ حذف الكل", b"delete_all_tasks"),
+                     Button.inline("🔄 إعادة تحميل", b"reload_tasks")],
+                    [Button.inline("📝 تحرير المهام", b"edit_tasks_file"),
+                     Button.inline("🔧 إصلاح الملف", b"repair_tasks_file")],
+                    [Button.inline("🔙 العودة", b"multi_task_menu")]
+                ]
             
-            # Clean up
-            del self.temp_task_data[user_id]
-            del self.user_states[user_id]
+            await event.edit(text, buttons=keyboard)
             
-            # Show success message
+        except Exception as e:
+            await event.edit(f"❌ خطأ في إدارة المهام: {e}")
+    
+    async def refresh_tasks(self, event):
+        """Refresh tasks from file"""
+        try:
+            tasks_data = self._load_tasks_from_file()
+            
             text = (
-                f"🎉 **{status_text}**\n\n"
-                f"📝 **اسم المهمة:** {task_data['name']}\n"
-                f"📥 **المصدر:** `{task_data['source_chat']}`\n"
-                f"📤 **الهدف:** `{task_data['target_chat']}`\n"
-                f"🆔 **معرف المهمة:** `{task_id}`\n\n"
-                "🚀 **المهمة جاهزة للعمل!**"
+                "🔄 **تحديث ملف المهام**\n\n"
+                f"📊 **تم تحميل {len(tasks_data)} مهمة**\n\n"
+                "✅ تم تحديث البيانات بنجاح"
             )
             
             keyboard = [
                 [Button.inline("📋 عرض المهام", b"view_tasks")],
-                [Button.inline("🔙 إدارة المهام", b"multi_task_menu")]
+                [Button.inline("🔙 العودة", b"multi_task_menu")]
             ]
             
-            await event.respond(text, buttons=keyboard)
+            await event.edit(text, buttons=keyboard)
             
         except Exception as e:
-            await event.respond(f"❌ خطأ في إنشاء المهمة: {e}")
-            if user_id in self.user_states:
-                del self.user_states[user_id]
+            await event.edit(f"❌ خطأ في تحديث المهام: {e}")
     
-    async def set_forwarder_instance(self, forwarder):
-        """Set reference to the forwarder instance"""
-        self.forwarder_instance = forwarder
-        self.logger.info("Forwarder instance connected to control bot")
-
-    async def run_until_disconnected(self):
-        """Keep the bot running"""
-        await self.client.run_until_disconnected()
+    async def export_config(self, event):
+        """Export current configuration"""
+        try:
+            tasks_data = self._load_tasks_from_file()
+            config = await self.get_current_config()
+            
+            # Create export data
+            export_data = {
+                "timestamp": int(time.time()),
+                "bot_config": {
+                    "api_id": config.get('api', 'api_id', fallback=''),
+                    "source_chat": config.get('forwarding', 'source_chat', fallback=''),
+                    "target_chat": config.get('forwarding', 'target_chat', fallback=''),
+                    "forward_mode": config.get('forwarding', 'forward_mode', fallback='copy'),
+                    "forward_delay": config.get('forwarding', 'forward_delay', fallback='1.0')
+                },
+                "multi_tasks": tasks_data
+            }
+            
+            # Save export file
+            import json
+            with open('config_export.json', 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, indent=2, ensure_ascii=False)
+            
+            text = (
+                "📤 **تصدير الإعدادات**\n\n"
+                f"✅ **تم إنشاء ملف التصدير:** `config_export.json`\n\n"
+                f"📊 **محتويات التصدير:**\n"
+                f"• إعدادات البوت الأساسية\n"
+                f"• {len(tasks_data)} مهمة متعددة\n"
+                f"• الطوابع الزمنية\n\n"
+                "💾 **يمكنك تحميل الملف لحفظ النسخة الاحتياطية**"
+            )
+            
+            keyboard = [
+                [Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("🔙 العودة", b"multi_task_menu")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في تصدير الإعدادات: {e}")
+    
+    async def enable_all_tasks(self, event):
+        """Enable all tasks"""
+        try:
+            tasks_data = self._load_tasks_from_file()
+            
+            for task in tasks_data:
+                task['enabled'] = True
+            
+            if self._save_tasks_to_file(tasks_data):
+                text = f"✅ **تم تفعيل {len(tasks_data)} مهمة**\n\nتحتاج لإعادة تشغيل البوت لتطبيق التغييرات"
+            else:
+                text = "❌ فشل في حفظ التغييرات"
+            
+            keyboard = [
+                [Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("🔙 إدارة المهام", b"manage_tasks")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في تفعيل المهام: {e}")
+    
+    async def disable_all_tasks(self, event):
+        """Disable all tasks"""
+        try:
+            tasks_data = self._load_tasks_from_file()
+            
+            for task in tasks_data:
+                task['enabled'] = False
+            
+            if self._save_tasks_to_file(tasks_data):
+                text = f"⏸️ **تم تعطيل {len(tasks_data)} مهمة**\n\nتحتاج لإعادة تشغيل البوت لتطبيق التغييرات"
+            else:
+                text = "❌ فشل في حفظ التغييرات"
+            
+            keyboard = [
+                [Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("🔙 إدارة المهام", b"manage_tasks")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في تعطيل المهام: {e}")
+    
+    async def delete_all_tasks(self, event):
+        """Delete all tasks with confirmation"""
+        try:
+            tasks_data = self._load_tasks_from_file()
+            
+            if not tasks_data:
+                text = "🔍 **لا توجد مهام للحذف**"
+                keyboard = [[Button.inline("🔙 العودة", b"manage_tasks")]]
+            else:
+                text = (
+                    f"⚠️ **تأكيد حذف {len(tasks_data)} مهمة**\n\n"
+                    "🚨 **تحذير:** هذا الإجراء لا يمكن التراجع عنه!\n\n"
+                    "ستفقد جميع المهام المحفوظة والإعدادات المرتبطة بها.\n\n"
+                    "هل أنت متأكد من المتابعة؟"
+                )
+                
+                keyboard = [
+                    [Button.inline("🗑️ نعم، احذف الكل", b"confirm_delete_all")],
+                    [Button.inline("❌ إلغاء", b"manage_tasks")]
+                ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في حذف المهام: {e}")
+    
+    async def confirm_delete_all_tasks(self, event):
+        """Confirm and delete all tasks"""
+        try:
+            if self._save_tasks_to_file([]):
+                text = "🗑️ **تم حذف جميع المهام بنجاح**\n\nيمكنك الآن إضافة مهام جديدة"
+            else:
+                text = "❌ فشل في حذف المهام"
+            
+            keyboard = [
+                [Button.inline("➕ إضافة مهمة جديدة", b"add_task")],
+                [Button.inline("🔙 إدارة المهام", b"manage_tasks")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في تأكيد الحذف: {e}")
+    
+    async def reload_tasks(self, event):
+        """Reload tasks from file"""
+        try:
+            # Force reload tasks
+            tasks_data = self._load_tasks_from_file()
+            
+            # Validate tasks
+            valid_tasks = []
+            for task in tasks_data:
+                if task.get('source_chat') and task.get('target_chat'):
+                    valid_tasks.append(task)
+            
+            # Save cleaned tasks
+            self._save_tasks_to_file(valid_tasks)
+            
+            text = (
+                "🔄 **إعادة تحميل المهام**\n\n"
+                f"📊 **النتائج:**\n"
+                f"• إجمالي المهام: {len(tasks_data)}\n"
+                f"• المهام الصحيحة: {len(valid_tasks)}\n"
+                f"• المهام المحذوفة: {len(tasks_data) - len(valid_tasks)}\n\n"
+                "✅ تم تحديث الملف بنجاح"
+            )
+            
+            keyboard = [
+                [Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("🔙 إدارة المهام", b"manage_tasks")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في إعادة التحميل: {e}")
+    
+    async def repair_tasks_file(self, event):
+        """Repair tasks file"""
+        try:
+            import json
+            import os
+            
+            # Backup existing file
+            if os.path.exists('steering_tasks.json'):
+                import shutil
+                shutil.copy('steering_tasks.json', 'steering_tasks_backup.json')
+            
+            # Try to load and repair
+            try:
+                tasks_data = self._load_tasks_from_file()
+            except:
+                tasks_data = []
+            
+            # Repair tasks
+            repaired_tasks = []
+            for task in tasks_data:
+                # Ensure required fields
+                required_fields = ['task_id', 'name', 'source_chat', 'target_chat', 'enabled']
+                if all(field in task for field in required_fields):
+                    # Add missing optional fields
+                    defaults = {
+                        'forward_delay': 1.0,
+                        'max_retries': 3,
+                        'forward_mode': 'copy',
+                        'forward_text': True,
+                        'forward_photos': True,
+                        'forward_videos': True,
+                        'header_enabled': False,
+                        'footer_enabled': False,
+                        'blacklist_enabled': False,
+                        'whitelist_enabled': False
+                    }
+                    
+                    for field, default_value in defaults.items():
+                        if field not in task:
+                            task[field] = default_value
+                    
+                    repaired_tasks.append(task)
+            
+            # Save repaired file
+            self._save_tasks_to_file(repaired_tasks)
+            
+            text = (
+                "🔧 **إصلاح ملف المهام**\n\n"
+                f"📊 **النتائج:**\n"
+                f"• المهام الأصلية: {len(tasks_data)}\n"
+                f"• المهام المُصلحة: {len(repaired_tasks)}\n"
+                f"• نسخة احتياطية: `steering_tasks_backup.json`\n\n"
+                "✅ تم إصلاح الملف بنجاح"
+            )
+            
+            keyboard = [
+                [Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("🔙 إدارة المهام", b"manage_tasks")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في إصلاح الملف: {e}")
 
 async def main():
     """Main function"""
