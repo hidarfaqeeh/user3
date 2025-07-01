@@ -48,7 +48,7 @@ except ImportError:
     stats_manager = SimpleStatsManager()
 
 class ModernControlBot:
-    """Modern interactive control bot with inline keyboards"""
+    """Modern interactive control bot with inline keyboards and multi-task support"""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -57,6 +57,7 @@ class ModernControlBot:
         self.admin_user_id = None
         self.userbot_process = None
         self.user_states = {}  # Track user interaction states
+        self.forwarder_instance = None  # Reference to TelegramForwarder instance
         self.setup_client()
         
     def setup_client(self):
