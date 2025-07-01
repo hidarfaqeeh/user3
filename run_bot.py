@@ -68,24 +68,34 @@ def check_environment():
     print("=" * 50)
     return True
 
-async def run_userbot():
+async def run_userbot(control_bot_instance=None):
     """Run the main userbot"""
     try:
         from userbot import TelegramForwarder
         
         forwarder = TelegramForwarder()
+        
+        # Connect control bot to forwarder for multi-task management
+        if control_bot_instance:
+            await control_bot_instance.set_forwarder_instance(forwarder)
+        
         await forwarder.start()
         await forwarder.run_until_disconnected()
     except Exception as e:
         logging.error(f"خطأ في البوت الأساسي: {e}")
         raise
 
-async def run_control_bot():
+async def run_control_bot(forwarder_instance=None):
     """Run the control bot"""
     try:
         from modern_control_bot import ModernControlBot
         
         control_bot = ModernControlBot()
+        
+        # Set forwarder instance if provided
+        if forwarder_instance:
+            await control_bot.set_forwarder_instance(forwarder_instance)
+        
         await control_bot.start()
         await control_bot.run_until_disconnected()
     except Exception as e:
@@ -93,7 +103,7 @@ async def run_control_bot():
         raise
 
 async def run_both_bots():
-    """Run both bots concurrently"""
+    """Run both bots concurrently with proper integration"""
     print("🚀 بدء تشغيل البوتات...")
     
     # Setup logging
@@ -104,10 +114,33 @@ async def run_both_bots():
     )
     
     try:
+        # Import bot classes
+        from userbot import TelegramForwarder
+        from modern_control_bot import ModernControlBot
+        
+        # Create instances
+        print("🔧 إنشاء البوتات...")
+        forwarder = TelegramForwarder()
+        control_bot = ModernControlBot()
+        
+        # Connect them for multi-task management
+        print("🔗 ربط البوتات...")
+        await control_bot.set_forwarder_instance(forwarder)
+        
+        # Start control bot first
+        print("🚀 تشغيل بوت التحكم...")
+        await control_bot.start()
+        
+        # Start userbot
+        print("🚀 تشغيل البوت الأساسي...")
+        await forwarder.start()
+        
+        print("✅ تم تشغيل البوتات بنجاح مع دعم المهام المتعددة!")
+        
         # Run both bots concurrently
         await asyncio.gather(
-            run_userbot(),
-            run_control_bot(),
+            forwarder.run_until_disconnected(),
+            control_bot.run_until_disconnected(),
             return_exceptions=True
         )
     except KeyboardInterrupt:
