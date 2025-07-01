@@ -41,4 +41,4 @@ RUN chmod +x /app/*.py
 USER app
 
 # تشغيل النظام السريع مع دعم Webhook التلقائي
-CMD ["python", "run_ultra_fast.py"]
+CMD ["python", "run_bot.py"]
