@@ -665,15 +665,23 @@ class TelegramForwarder:
         self._save_steering_tasks()
         self.logger.info(f"Added steering task: {config.name}")
     
-    def remove_steering_task(self, task_id: str):
+    def remove_steering_task(self, task_id: str) -> bool:
         """Remove a steering task configuration"""
-        if task_id in self.steering_tasks:
-            asyncio.create_task(self.stop_steering_task(task_id))
-        
-        if task_id in self.task_configs:
-            del self.task_configs[task_id]
-            self._save_steering_tasks()
-            self.logger.info(f"Removed steering task: {task_id}")
+        try:
+            if task_id in self.steering_tasks:
+                asyncio.create_task(self.stop_steering_task(task_id))
+            
+            if task_id in self.task_configs:
+                del self.task_configs[task_id]
+                self._save_steering_tasks()
+                self.logger.info(f"Removed steering task: {task_id}")
+                return True
+            else:
+                self.logger.warning(f"Task {task_id} not found in configurations")
+                return False
+        except Exception as e:
+            self.logger.error(f"Failed to remove task {task_id}: {e}")
+            return False
     
     def get_task_stats(self) -> Dict[str, Dict]:
         """Get statistics for all tasks"""
@@ -700,6 +708,36 @@ class TelegramForwarder:
                 }
         
         return stats
+    
+    def get_task_config(self, task_id: str) -> Optional[SteeringTaskConfig]:
+        """Get configuration for a specific task"""
+        return self.task_configs.get(task_id)
+    
+    def update_task_config(self, task_id: str, **kwargs) -> bool:
+        """Update configuration for a specific task"""
+        try:
+            if task_id not in self.task_configs:
+                return False
+            
+            config = self.task_configs[task_id]
+            for key, value in kwargs.items():
+                if hasattr(config, key):
+                    setattr(config, key, value)
+            
+            self._save_steering_tasks()
+            
+            # If task is running, restart it to apply changes
+            if task_id in self.steering_tasks:
+                asyncio.create_task(self.restart_steering_task(task_id))
+            
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to update task config {task_id}: {e}")
+            return False
+    
+    def get_all_task_configs(self) -> Dict[str, SteeringTaskConfig]:
+        """Get all task configurations"""
+        return self.task_configs.copy()
     
     def _register_admin_handlers(self):
         """Register admin command handlers"""

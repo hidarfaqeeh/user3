@@ -414,6 +414,67 @@ class ModernControlBot:
                 task_id = data.replace("delete_confirmed_", "")
                 await self.delete_task_confirmed(event, task_id)
             
+            # Task settings callbacks
+            elif data.startswith("edit_forward_mode_"):
+                task_id = data.replace("edit_forward_mode_", "")
+                await self.edit_task_forward_mode(event, task_id)
+            elif data.startswith("edit_media_filters_"):
+                task_id = data.replace("edit_media_filters_", "")
+                await self.edit_task_media_filters(event, task_id)
+            elif data.startswith("edit_text_cleaner_"):
+                task_id = data.replace("edit_text_cleaner_", "")
+                await self.edit_task_text_cleaner(event, task_id)
+            elif data.startswith("edit_smart_replacer_"):
+                task_id = data.replace("edit_smart_replacer_", "")
+                await self.edit_task_smart_replacer(event, task_id)
+            elif data.startswith("edit_custom_buttons_"):
+                task_id = data.replace("edit_custom_buttons_", "")
+                await self.edit_task_custom_buttons(event, task_id)
+            elif data.startswith("edit_header_footer_"):
+                task_id = data.replace("edit_header_footer_", "")
+                await self.edit_task_header_footer(event, task_id)
+            elif data.startswith("edit_allow_list_"):
+                task_id = data.replace("edit_allow_list_", "")
+                await self.edit_task_allow_list(event, task_id)
+            elif data.startswith("edit_block_list_"):
+                task_id = data.replace("edit_block_list_", "")
+                await self.edit_task_block_list(event, task_id)
+            
+            # Task specific toggle callbacks
+            elif data.startswith("set_forward_mode_"):
+                parts = data.replace("set_forward_mode_", "").split("_")
+                task_id = "_".join(parts[:-1])
+                mode = parts[-1]
+                await self.set_task_forward_mode(event, task_id, mode)
+            elif data.startswith("toggle_task_media_"):
+                parts = data.replace("toggle_task_media_", "").split("_")
+                task_id = "_".join(parts[:-1])
+                media_type = parts[-1]
+                await self.toggle_task_media_filter(event, task_id, media_type)
+            elif data.startswith("toggle_task_clean_"):
+                parts = data.replace("toggle_task_clean_", "").split("_")
+                task_id = "_".join(parts[:-1])
+                clean_type = parts[-1]
+                await self.toggle_task_clean_option(event, task_id, clean_type)
+            elif data.startswith("toggle_task_replacer_"):
+                task_id = data.replace("toggle_task_replacer_", "")
+                await self.toggle_task_replacer(event, task_id)
+            elif data.startswith("toggle_task_buttons_"):
+                task_id = data.replace("toggle_task_buttons_", "")
+                await self.toggle_task_buttons(event, task_id)
+            elif data.startswith("toggle_task_header_"):
+                task_id = data.replace("toggle_task_header_", "")
+                await self.toggle_task_header(event, task_id)
+            elif data.startswith("toggle_task_footer_"):
+                task_id = data.replace("toggle_task_footer_", "")
+                await self.toggle_task_footer(event, task_id)
+            elif data.startswith("toggle_task_whitelist_"):
+                task_id = data.replace("toggle_task_whitelist_", "")
+                await self.toggle_task_whitelist(event, task_id)
+            elif data.startswith("toggle_task_blacklist_"):
+                task_id = data.replace("toggle_task_blacklist_", "")
+                await self.toggle_task_blacklist(event, task_id)
+            
             # Advanced settings callbacks
             elif data == "set_delay":
                 await self.prompt_delay_setting(event)
@@ -3084,53 +3145,6 @@ class ModernControlBot:
         except Exception as e:
             await event.answer(f"❌ خطأ: {e}", alert=True)
 
-    async def edit_specific_task(self, event, task_id):
-        """Edit settings for a specific task"""
-        try:
-            if not self.forwarder_instance:
-                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
-                return
-            
-            task_stats = self.forwarder_instance.get_task_stats()
-            task_info = task_stats.get(task_id)
-            
-            if not task_info:
-                await event.answer("❌ المهمة غير موجودة", alert=True)
-                return
-            
-            # Get task configuration if available
-            task_config = self.forwarder_instance.get_task_config(task_id)
-            
-            status_emoji = "🟢" if task_info['status'] == 'running' else "🔴"
-            
-            text = (
-                f"⚙️ **إعدادات المهمة**\n\n"
-                f"📝 **اسم المهمة:** {task_info['name']}\n"
-                f"📊 **الحالة:** {status_emoji} {task_info['status']}\n"
-                f"📥 **المصدر:** `{task_info['source_chat']}`\n"
-                f"📤 **الهدف:** `{task_info['target_chat']}`\n\n"
-                f"🔧 **الإعدادات المتاحة:**"
-            )
-            
-            keyboard = [
-                [Button.inline("📝 تغيير الاسم", f"edit_name_{task_id}".encode()),
-                 Button.inline("📥 تغيير المصدر", f"edit_source_{task_id}".encode())],
-                [Button.inline("📤 تغيير الهدف", f"edit_target_{task_id}".encode()),
-                 Button.inline("⏱️ تأخير الإرسال", f"edit_delay_{task_id}".encode())],
-                [Button.inline("🎛️ فلاتر الوسائط", f"edit_filters_{task_id}".encode()),
-                 Button.inline("🔄 الاستبدال الذكي", f"edit_replacer_{task_id}".encode())],
-                [Button.inline("📝 رأس وتذييل", f"edit_header_footer_{task_id}".encode()),
-                 Button.inline("🔘 الأزرار المخصصة", f"edit_buttons_{task_id}".encode())],
-                [Button.inline("🚫 قائمة الحظر", f"edit_blacklist_{task_id}".encode()),
-                 Button.inline("✅ قائمة السماح", f"edit_whitelist_{task_id}".encode())],
-                [Button.inline("🔙 العودة", b"multi_task_menu")]
-            ]
-            
-            await event.edit(text, buttons=keyboard)
-            
-        except Exception as e:
-            await event.answer(f"❌ خطأ: {e}", alert=True)
-
     async def delete_task_confirmed(self, event, task_id):
         """Execute task deletion after confirmation"""
         try:
@@ -3173,6 +3187,628 @@ class ModernControlBot:
     async def run_until_disconnected(self):
         """Keep the bot running"""
         await self.client.run_until_disconnected()
+
+    async def edit_specific_task(self, event, task_id):
+        """Edit settings for a specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            task_info = task_stats.get(task_id)
+            
+            if not task_info:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            # Get task configuration if available
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            
+            status_emoji = "🟢" if task_info['status'] == 'running' else "🔴"
+            
+            text = (
+                f"⚙️ **إعدادات المهمة**\n\n"
+                f"📝 **اسم المهمة:** {task_info['name']}\n"
+                f"📊 **الحالة:** {status_emoji} {task_info['status']}\n"
+                f"📥 **المصدر:** `{task_info['source_chat']}`\n"
+                f"📤 **الهدف:** `{task_info['target_chat']}`\n\n"
+                f"🔧 **الإعدادات المتاحة:**"
+            )
+            
+            keyboard = [
+                [Button.inline("⚙️ وضع التوجيه", f"edit_forward_mode_{task_id}".encode()),
+                 Button.inline("📥 تغيير المصدر", f"edit_source_{task_id}".encode())],
+                [Button.inline("📤 تغيير الهدف", f"edit_target_{task_id}".encode()),
+                 Button.inline("🧹 منظف النصوص", f"edit_text_cleaner_{task_id}".encode())],
+                [Button.inline("🎛️ فلاتر الوسائط", f"edit_media_filters_{task_id}".encode()),
+                 Button.inline("🔄 الاستبدال الذكي", f"edit_smart_replacer_{task_id}".encode())],
+                [Button.inline("🔘 الأزرار المخصصة", f"edit_custom_buttons_{task_id}".encode()),
+                 Button.inline("📝 رأس وتذييل", f"edit_header_footer_{task_id}".encode())],
+                [Button.inline("✅ قائمة السماح", f"edit_allow_list_{task_id}".encode()),
+                 Button.inline("🚫 قائمة الحظر", f"edit_block_list_{task_id}".encode())],
+                [Button.inline("📝 تغيير الاسم", f"edit_task_name_{task_id}".encode()),
+                 Button.inline("⏱️ تأخير الإرسال", f"edit_delay_{task_id}".encode())],
+                [Button.inline("🔙 العودة", b"multi_task_menu")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_forward_mode(self, event, task_id):
+        """Edit forward mode for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_mode = task_config.forward_mode
+            
+            text = (
+                f"⚙️ **وضع التوجيه للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n"
+                f"🔧 **الوضع الحالي:** {current_mode}\n\n"
+                f"💡 **اختر وضع التوجيه:**\n"
+                f"📤 **Forward:** إعادة توجيه مباشر (يظهر \"Forwarded from\")\n"
+                f"📝 **Copy:** نسخ المحتوى (كرسالة جديدة)\n"
+            )
+            
+            keyboard = [
+                [Button.inline("📤 Forward Mode", f"set_forward_mode_{task_id}_forward".encode()),
+                 Button.inline("📝 Copy Mode", f"set_forward_mode_{task_id}_copy".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_media_filters(self, event, task_id):
+        """Edit media filters for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            def get_status_emoji(enabled):
+                return "✅" if enabled else "❌"
+            
+            text = (
+                f"🎛️ **فلاتر الوسائط للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n\n"
+                f"📱 **أنواع الوسائط:**\n"
+                f"{get_status_emoji(task_config.forward_photos)} الصور\n"
+                f"{get_status_emoji(task_config.forward_videos)} الفيديو\n"
+                f"{get_status_emoji(task_config.forward_music)} الموسيقى\n"
+                f"{get_status_emoji(task_config.forward_audio)} الصوت\n"
+                f"{get_status_emoji(task_config.forward_voice)} الرسائل الصوتية\n"
+                f"{get_status_emoji(task_config.forward_video_messages)} فيديو دائري\n"
+                f"{get_status_emoji(task_config.forward_files)} الملفات\n"
+                f"{get_status_emoji(task_config.forward_gifs)} الصور المتحركة\n"
+                f"{get_status_emoji(task_config.forward_stickers)} الملصقات\n"
+                f"{get_status_emoji(task_config.forward_text)} النصوص\n"
+            )
+            
+            keyboard = [
+                [Button.inline(f"📷 الصور {get_status_emoji(task_config.forward_photos)}", f"toggle_task_media_{task_id}_photos".encode()),
+                 Button.inline(f"🎥 الفيديو {get_status_emoji(task_config.forward_videos)}", f"toggle_task_media_{task_id}_videos".encode())],
+                [Button.inline(f"🎵 الموسيقى {get_status_emoji(task_config.forward_music)}", f"toggle_task_media_{task_id}_music".encode()),
+                 Button.inline(f"🔊 الصوت {get_status_emoji(task_config.forward_audio)}", f"toggle_task_media_{task_id}_audio".encode())],
+                [Button.inline(f"🎤 رسائل صوتية {get_status_emoji(task_config.forward_voice)}", f"toggle_task_media_{task_id}_voice".encode()),
+                 Button.inline(f"📹 فيديو دائري {get_status_emoji(task_config.forward_video_messages)}", f"toggle_task_media_{task_id}_video_messages".encode())],
+                [Button.inline(f"📁 الملفات {get_status_emoji(task_config.forward_files)}", f"toggle_task_media_{task_id}_files".encode()),
+                 Button.inline(f"🎭 الملصقات {get_status_emoji(task_config.forward_stickers)}", f"toggle_task_media_{task_id}_stickers".encode())],
+                [Button.inline(f"📝 النصوص {get_status_emoji(task_config.forward_text)}", f"toggle_task_media_{task_id}_text".encode()),
+                 Button.inline(f"🎞️ الصور المتحركة {get_status_emoji(task_config.forward_gifs)}", f"toggle_task_media_{task_id}_gifs".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_text_cleaner(self, event, task_id):
+        """Edit text cleaner settings for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            def get_status_emoji(enabled):
+                return "✅" if enabled else "❌"
+            
+            text = (
+                f"🧹 **منظف النصوص للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n\n"
+                f"🔧 **خيارات التنظيف:**\n"
+                f"{get_status_emoji(task_config.clean_links)} حذف الروابط\n"
+                f"{get_status_emoji(task_config.clean_hashtags)} حذف الهاشتاغ\n"
+                f"{get_status_emoji(task_config.clean_formatting)} حذف التنسيق\n"
+                f"{get_status_emoji(task_config.clean_empty_lines)} حذف الأسطر الفارغة\n"
+                f"{get_status_emoji(task_config.clean_lines_with_words)} حذف أسطر بكلمات محددة\n"
+            )
+            
+            keyboard = [
+                [Button.inline(f"🔗 الروابط {get_status_emoji(task_config.clean_links)}", f"toggle_task_clean_{task_id}_links".encode()),
+                 Button.inline(f"# الهاشتاغ {get_status_emoji(task_config.clean_hashtags)}", f"toggle_task_clean_{task_id}_hashtags".encode())],
+                [Button.inline(f"🎨 التنسيق {get_status_emoji(task_config.clean_formatting)}", f"toggle_task_clean_{task_id}_formatting".encode()),
+                 Button.inline(f"📄 الأسطر الفارغة {get_status_emoji(task_config.clean_empty_lines)}", f"toggle_task_clean_{task_id}_empty_lines".encode())],
+                [Button.inline(f"🚫 كلمات محددة {get_status_emoji(task_config.clean_lines_with_words)}", f"toggle_task_clean_{task_id}_words".encode())],
+                [Button.inline("📝 تعديل الكلمات المحظورة", f"edit_task_clean_words_{task_id}".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_smart_replacer(self, event, task_id):
+        """Edit smart text replacer for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            def get_status_emoji(enabled):
+                return "✅" if enabled else "❌"
+            
+            replacements_text = "لا توجد استبدالات"
+            if task_config.replacements:
+                replacements_list = [r.strip() for r in task_config.replacements.split(',') if r.strip() and '->' in r]
+                if replacements_list:
+                    replacements_text = "\n".join([f"• {r}" for r in replacements_list[:5]])
+                    if len(replacements_list) > 5:
+                        replacements_text += f"\n... و {len(replacements_list) - 5} أخرى"
+            
+            text = (
+                f"🔄 **الاستبدال الذكي للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n"
+                f"🔧 **الحالة:** {get_status_emoji(task_config.replacer_enabled)}\n\n"
+                f"📋 **الاستبدالات الحالية:**\n{replacements_text}\n\n"
+                f"💡 **تنسيق الاستبدال:** نص قديم -> نص جديد"
+            )
+            
+            keyboard = [
+                [Button.inline(f"⚡ تفعيل/إلغاء {get_status_emoji(task_config.replacer_enabled)}", f"toggle_task_replacer_{task_id}".encode())],
+                [Button.inline("➕ إضافة استبدال", f"add_task_replacement_{task_id}".encode()),
+                 Button.inline("📋 عرض الاستبدالات", f"view_task_replacements_{task_id}".encode())],
+                [Button.inline("🗑️ حذف جميع الاستبدالات", f"clear_task_replacements_{task_id}".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_custom_buttons(self, event, task_id):
+        """Edit custom buttons for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            def get_status_emoji(enabled):
+                return "✅" if enabled else "❌"
+            
+            def get_button_status(text, url):
+                if text and url:
+                    return f"✅ {text[:15]}..."
+                return "❌ غير مُعد"
+            
+            text = (
+                f"🔘 **الأزرار المخصصة للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n"
+                f"🔧 **الحالة:** {get_status_emoji(task_config.buttons_enabled)}\n\n"
+                f"🔘 **الأزرار الحالية:**\n"
+                f"1️⃣ {get_button_status(task_config.button1_text, task_config.button1_url)}\n"
+                f"2️⃣ {get_button_status(task_config.button2_text, task_config.button2_url)}\n"
+                f"3️⃣ {get_button_status(task_config.button3_text, task_config.button3_url)}\n"
+            )
+            
+            keyboard = [
+                [Button.inline(f"⚡ تفعيل/إلغاء {get_status_emoji(task_config.buttons_enabled)}", f"toggle_task_buttons_{task_id}".encode())],
+                [Button.inline("1️⃣ تعديل الزر الأول", f"edit_task_button_{task_id}_1".encode()),
+                 Button.inline("2️⃣ تعديل الزر الثاني", f"edit_task_button_{task_id}_2".encode())],
+                [Button.inline("3️⃣ تعديل الزر الثالث", f"edit_task_button_{task_id}_3".encode())],
+                [Button.inline("🗑️ حذف جميع الأزرار", f"clear_task_buttons_{task_id}".encode())],
+                [Button.inline("👀 معاينة الأزرار", f"preview_task_buttons_{task_id}".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_header_footer(self, event, task_id):
+        """Edit header and footer for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            def get_status_emoji(enabled):
+                return "✅" if enabled else "❌"
+            
+            header_preview = task_config.header_text[:30] + "..." if len(task_config.header_text) > 30 else task_config.header_text
+            footer_preview = task_config.footer_text[:30] + "..." if len(task_config.footer_text) > 30 else task_config.footer_text
+            
+            text = (
+                f"📝 **رأس وتذييل للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n\n"
+                f"📤 **الرأس (Header):**\n"
+                f"الحالة: {get_status_emoji(task_config.header_enabled)}\n"
+                f"النص: {header_preview or 'غير محدد'}\n\n"
+                f"📥 **التذييل (Footer):**\n"
+                f"الحالة: {get_status_emoji(task_config.footer_enabled)}\n"
+                f"النص: {footer_preview or 'غير محدد'}\n"
+            )
+            
+            keyboard = [
+                [Button.inline(f"📤 الرأس {get_status_emoji(task_config.header_enabled)}", f"toggle_task_header_{task_id}".encode()),
+                 Button.inline(f"📥 التذييل {get_status_emoji(task_config.footer_enabled)}", f"toggle_task_footer_{task_id}".encode())],
+                [Button.inline("✏️ تعديل الرأس", f"edit_task_header_text_{task_id}".encode()),
+                 Button.inline("✏️ تعديل التذييل", f"edit_task_footer_text_{task_id}".encode())],
+                [Button.inline("🗑️ حذف الرأس", f"clear_task_header_{task_id}".encode()),
+                 Button.inline("🗑️ حذف التذييل", f"clear_task_footer_{task_id}".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_allow_list(self, event, task_id):
+        """Edit allow list (whitelist) for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            def get_status_emoji(enabled):
+                return "✅" if enabled else "❌"
+            
+            whitelist_words = task_config.whitelist_words.split(',') if task_config.whitelist_words else []
+            whitelist_preview = ", ".join(whitelist_words[:3])
+            if len(whitelist_words) > 3:
+                whitelist_preview += f" ... (+{len(whitelist_words) - 3})"
+            
+            text = (
+                f"✅ **قائمة السماح للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n"
+                f"🔧 **الحالة:** {get_status_emoji(task_config.whitelist_enabled)}\n\n"
+                f"📋 **الكلمات المسموحة:**\n"
+                f"{whitelist_preview if whitelist_words else 'لا توجد كلمات'}\n\n"
+                f"💡 **ملاحظة:** عند التفعيل، ستمرر فقط الرسائل التي تحتوي على هذه الكلمات"
+            )
+            
+            keyboard = [
+                [Button.inline(f"⚡ تفعيل/إلغاء {get_status_emoji(task_config.whitelist_enabled)}", f"toggle_task_whitelist_{task_id}".encode())],
+                [Button.inline("➕ إضافة كلمات", f"add_task_whitelist_{task_id}".encode()),
+                 Button.inline("📋 عرض الكلمات", f"view_task_whitelist_{task_id}".encode())],
+                [Button.inline("🗑️ حذف جميع الكلمات", f"clear_task_whitelist_{task_id}".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_task_block_list(self, event, task_id):
+        """Edit block list (blacklist) for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            def get_status_emoji(enabled):
+                return "✅" if enabled else "❌"
+            
+            blacklist_words = task_config.blacklist_words.split(',') if task_config.blacklist_words else []
+            blacklist_preview = ", ".join(blacklist_words[:3])
+            if len(blacklist_words) > 3:
+                blacklist_preview += f" ... (+{len(blacklist_words) - 3})"
+            
+            text = (
+                f"🚫 **قائمة الحظر للمهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n"
+                f"🔧 **الحالة:** {get_status_emoji(task_config.blacklist_enabled)}\n\n"
+                f"📋 **الكلمات المحظورة:**\n"
+                f"{blacklist_preview if blacklist_words else 'لا توجد كلمات'}\n\n"
+                f"💡 **ملاحظة:** عند التفعيل، سيتم حظر الرسائل التي تحتوي على هذه الكلمات"
+            )
+            
+            keyboard = [
+                [Button.inline(f"⚡ تفعيل/إلغاء {get_status_emoji(task_config.blacklist_enabled)}", f"toggle_task_blacklist_{task_id}".encode())],
+                [Button.inline("➕ إضافة كلمات", f"add_task_blacklist_{task_id}".encode()),
+                 Button.inline("📋 عرض الكلمات", f"view_task_blacklist_{task_id}".encode())],
+                [Button.inline("🗑️ حذف جميع الكلمات", f"clear_task_blacklist_{task_id}".encode())],
+                [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Task-specific toggle functions
+    async def set_task_forward_mode(self, event, task_id, mode):
+        """Set forward mode for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, forward_mode=mode)
+            if success:
+                mode_text = "إعادة توجيه مباشر" if mode == "forward" else "نسخ المحتوى"
+                await event.answer(f"✅ تم تغيير وضع التوجيه إلى: {mode_text}", alert=False)
+                await self.edit_task_forward_mode(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_media_filter(self, event, task_id, media_type):
+        """Toggle media filter for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            field_name = f"forward_{media_type}"
+            current_value = getattr(task_config, field_name, True)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, **{field_name: new_value})
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ {media_type} أصبح {status_text}", alert=False)
+                await self.edit_task_media_filters(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_clean_option(self, event, task_id, clean_type):
+        """Toggle text cleaning option for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            field_name = f"clean_{clean_type}" if clean_type != "words" else "clean_lines_with_words"
+            current_value = getattr(task_config, field_name, False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, **{field_name: new_value})
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                clean_names = {
+                    "links": "حذف الروابط",
+                    "hashtags": "حذف الهاشتاغ", 
+                    "formatting": "حذف التنسيق",
+                    "empty_lines": "حذف الأسطر الفارغة",
+                    "words": "حذف أسطر بكلمات محددة"
+                }
+                clean_name = clean_names.get(clean_type, clean_type)
+                await event.answer(f"✅ {clean_name} أصبح {status_text}", alert=False)
+                await self.edit_task_text_cleaner(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_replacer(self, event, task_id):
+        """Toggle smart replacer for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            new_value = not task_config.replacer_enabled
+            success = self.forwarder_instance.update_task_config(task_id, replacer_enabled=new_value)
+            
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ الاستبدال الذكي أصبح {status_text}", alert=False)
+                await self.edit_task_smart_replacer(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_buttons(self, event, task_id):
+        """Toggle custom buttons for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            new_value = not task_config.buttons_enabled
+            success = self.forwarder_instance.update_task_config(task_id, buttons_enabled=new_value)
+            
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ الأزرار المخصصة أصبحت {status_text}", alert=False)
+                await self.edit_task_custom_buttons(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_header(self, event, task_id):
+        """Toggle header for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            new_value = not task_config.header_enabled
+            success = self.forwarder_instance.update_task_config(task_id, header_enabled=new_value)
+            
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ رأس الرسالة أصبح {status_text}", alert=False)
+                await self.edit_task_header_footer(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_footer(self, event, task_id):
+        """Toggle footer for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            new_value = not task_config.footer_enabled
+            success = self.forwarder_instance.update_task_config(task_id, footer_enabled=new_value)
+            
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ تذييل الرسالة أصبح {status_text}", alert=False)
+                await self.edit_task_header_footer(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_whitelist(self, event, task_id):
+        """Toggle whitelist for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            new_value = not task_config.whitelist_enabled
+            success = self.forwarder_instance.update_task_config(task_id, whitelist_enabled=new_value)
+            
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ قائمة السماح أصبحت {status_text}", alert=False)
+                await self.edit_task_allow_list(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_blacklist(self, event, task_id):
+        """Toggle blacklist for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            new_value = not task_config.blacklist_enabled
+            success = self.forwarder_instance.update_task_config(task_id, blacklist_enabled=new_value)
+            
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ قائمة الحظر أصبحت {status_text}", alert=False)
+                await self.edit_task_block_list(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
 
 async def main():
     """Main function"""
