@@ -385,6 +385,34 @@ class ModernControlBot:
                 await self.show_task_stats(event)
             elif data == "add_task":
                 await self.prompt_add_task(event)
+            elif data == "start_task":
+                await self.prompt_start_task(event)
+            elif data == "stop_task":
+                await self.prompt_stop_task(event)
+            elif data == "restart_task":
+                await self.prompt_restart_task(event)
+            elif data == "delete_task":
+                await self.prompt_delete_task(event)
+            elif data == "edit_task":
+                await self.prompt_edit_task(event)
+            elif data.startswith("confirm_delete_"):
+                task_id = data.replace("confirm_delete_", "")
+                await self.confirm_delete_task(event, task_id)
+            elif data.startswith("start_specific_"):
+                task_id = data.replace("start_specific_", "")
+                await self.start_specific_task(event, task_id)
+            elif data.startswith("stop_specific_"):
+                task_id = data.replace("stop_specific_", "")
+                await self.stop_specific_task(event, task_id)
+            elif data.startswith("restart_specific_"):
+                task_id = data.replace("restart_specific_", "")
+                await self.restart_specific_task(event, task_id)
+            elif data.startswith("edit_specific_"):
+                task_id = data.replace("edit_specific_", "")
+                await self.edit_specific_task(event, task_id)
+            elif data.startswith("delete_confirmed_"):
+                task_id = data.replace("delete_confirmed_", "")
+                await self.delete_task_confirmed(event, task_id)
             
             # Advanced settings callbacks
             elif data == "set_delay":
@@ -2742,6 +2770,401 @@ class ModernControlBot:
             if user_id in self.user_states:
                 del self.user_states[user_id]
     
+    async def prompt_start_task(self, event):
+        """Prompt user to select a task to start"""
+        try:
+            if not self.forwarder_instance:
+                await event.edit(
+                    "❌ **البوت الأساسي غير متصل**\n\n"
+                    "يرجى تشغيل البوت الأساسي أولاً",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            
+            if not task_stats:
+                await event.edit(
+                    "❌ **لا توجد مهام للتشغيل**\n\n"
+                    "استخدم 'إضافة مهمة' لإنشاء مهمة جديدة",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            # Show stopped tasks only
+            stopped_tasks = {k: v for k, v in task_stats.items() if v['status'] != 'running'}
+            
+            if not stopped_tasks:
+                await event.edit(
+                    "✅ **جميع المهام تعمل بالفعل**\n\n"
+                    "لا توجد مهام متوقفة للتشغيل",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            text = "▶️ **تشغيل مهمة**\n\n🔍 **اختر مهمة للتشغيل:**\n\n"
+            
+            keyboard = []
+            for task_id, stats in stopped_tasks.items():
+                task_name = stats['name'][:20] + "..." if len(stats['name']) > 20 else stats['name']
+                keyboard.append([Button.inline(f"▶️ {task_name}", f"start_specific_{task_id}".encode())])
+            
+            keyboard.append([Button.inline("🔙 العودة", b"multi_task_menu")])
+            
+            for task_id, stats in stopped_tasks.items():
+                text += f"🔴 **{stats['name']}**\n"
+                text += f"   📥 من: `{stats['source_chat']}`\n"
+                text += f"   📤 إلى: `{stats['target_chat']}`\n\n"
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض المهام: {e}")
+
+    async def prompt_stop_task(self, event):
+        """Prompt user to select a task to stop"""
+        try:
+            if not self.forwarder_instance:
+                await event.edit(
+                    "❌ **البوت الأساسي غير متصل**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            
+            if not task_stats:
+                await event.edit(
+                    "❌ **لا توجد مهام للإيقاف**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            # Show running tasks only
+            running_tasks = {k: v for k, v in task_stats.items() if v['status'] == 'running'}
+            
+            if not running_tasks:
+                await event.edit(
+                    "❌ **لا توجد مهام تعمل حالياً**\n\n"
+                    "جميع المهام متوقفة بالفعل",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            text = "⏹️ **إيقاف مهمة**\n\n🔍 **اختر مهمة لإيقافها:**\n\n"
+            
+            keyboard = []
+            for task_id, stats in running_tasks.items():
+                task_name = stats['name'][:20] + "..." if len(stats['name']) > 20 else stats['name']
+                keyboard.append([Button.inline(f"⏹️ {task_name}", f"stop_specific_{task_id}".encode())])
+            
+            keyboard.append([Button.inline("🔙 العودة", b"multi_task_menu")])
+            
+            for task_id, stats in running_tasks.items():
+                text += f"🟢 **{stats['name']}**\n"
+                text += f"   📥 من: `{stats['source_chat']}`\n"
+                text += f"   📤 إلى: `{stats['target_chat']}`\n\n"
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض المهام: {e}")
+
+    async def prompt_restart_task(self, event):
+        """Prompt user to select a task to restart"""
+        try:
+            if not self.forwarder_instance:
+                await event.edit(
+                    "❌ **البوت الأساسي غير متصل**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            
+            if not task_stats:
+                await event.edit(
+                    "❌ **لا توجد مهام لإعادة التشغيل**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            text = "🔄 **إعادة تشغيل مهمة**\n\n🔍 **اختر مهمة لإعادة تشغيلها:**\n\n"
+            
+            keyboard = []
+            for task_id, stats in task_stats.items():
+                task_name = stats['name'][:20] + "..." if len(stats['name']) > 20 else stats['name']
+                status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                keyboard.append([Button.inline(f"🔄 {task_name}", f"restart_specific_{task_id}".encode())])
+            
+            keyboard.append([Button.inline("🔙 العودة", b"multi_task_menu")])
+            
+            for task_id, stats in task_stats.items():
+                status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                text += f"{status_emoji} **{stats['name']}**\n"
+                text += f"   📥 من: `{stats['source_chat']}`\n"
+                text += f"   📤 إلى: `{stats['target_chat']}`\n\n"
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض المهام: {e}")
+
+    async def prompt_delete_task(self, event):
+        """Prompt user to select a task to delete"""
+        try:
+            if not self.forwarder_instance:
+                await event.edit(
+                    "❌ **البوت الأساسي غير متصل**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            
+            if not task_stats:
+                await event.edit(
+                    "❌ **لا توجد مهام للحذف**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            text = "🗑️ **حذف مهمة**\n\n⚠️ **تحذير:** الحذف نهائي ولا يمكن التراجع\n\n🔍 **اختر مهمة للحذف:**\n\n"
+            
+            keyboard = []
+            for task_id, stats in task_stats.items():
+                task_name = stats['name'][:20] + "..." if len(stats['name']) > 20 else stats['name']
+                status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                keyboard.append([Button.inline(f"🗑️ {task_name}", f"confirm_delete_{task_id}".encode())])
+            
+            keyboard.append([Button.inline("🔙 العودة", b"multi_task_menu")])
+            
+            for task_id, stats in task_stats.items():
+                status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                text += f"{status_emoji} **{stats['name']}**\n"
+                text += f"   📥 من: `{stats['source_chat']}`\n"
+                text += f"   📤 إلى: `{stats['target_chat']}`\n\n"
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض المهام: {e}")
+
+    async def prompt_edit_task(self, event):
+        """Prompt user to select a task to edit settings"""
+        try:
+            if not self.forwarder_instance:
+                await event.edit(
+                    "❌ **البوت الأساسي غير متصل**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            
+            if not task_stats:
+                await event.edit(
+                    "❌ **لا توجد مهام للتعديل**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            text = "⚙️ **إعدادات المهمة**\n\n🔍 **اختر مهمة لتعديل إعداداتها:**\n\n"
+            
+            keyboard = []
+            for task_id, stats in task_stats.items():
+                task_name = stats['name'][:20] + "..." if len(stats['name']) > 20 else stats['name']
+                status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                keyboard.append([Button.inline(f"⚙️ {task_name}", f"edit_specific_{task_id}".encode())])
+            
+            keyboard.append([Button.inline("🔙 العودة", b"multi_task_menu")])
+            
+            for task_id, stats in task_stats.items():
+                status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                text += f"{status_emoji} **{stats['name']}**\n"
+                text += f"   📥 من: `{stats['source_chat']}`\n"
+                text += f"   📤 إلى: `{stats['target_chat']}`\n\n"
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض المهام: {e}")
+
+    async def start_specific_task(self, event, task_id):
+        """Start a specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = await self.forwarder_instance.start_steering_task(task_id)
+            
+            if success:
+                await event.answer("✅ تم تشغيل المهمة بنجاح", alert=False)
+                # Refresh the view
+                await self.view_tasks(event)
+            else:
+                await event.answer("❌ فشل في تشغيل المهمة", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def stop_specific_task(self, event, task_id):
+        """Stop a specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = await self.forwarder_instance.stop_steering_task(task_id)
+            
+            if success:
+                await event.answer("✅ تم إيقاف المهمة بنجاح", alert=False)
+                # Refresh the view
+                await self.view_tasks(event)
+            else:
+                await event.answer("❌ فشل في إيقاف المهمة", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def restart_specific_task(self, event, task_id):
+        """Restart a specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            # First stop, then start
+            await self.forwarder_instance.stop_steering_task(task_id)
+            import asyncio
+            await asyncio.sleep(1)  # Small delay
+            success = await self.forwarder_instance.start_steering_task(task_id)
+            
+            if success:
+                await event.answer("🔄 تم إعادة تشغيل المهمة بنجاح", alert=False)
+                # Refresh the view
+                await self.view_tasks(event)
+            else:
+                await event.answer("❌ فشل في إعادة تشغيل المهمة", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def confirm_delete_task(self, event, task_id):
+        """Confirm task deletion"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            task_info = task_stats.get(task_id)
+            
+            if not task_info:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            text = (
+                f"⚠️ **تأكيد حذف المهمة**\n\n"
+                f"📝 **اسم المهمة:** {task_info['name']}\n"
+                f"📥 **المصدر:** `{task_info['source_chat']}`\n"
+                f"📤 **الهدف:** `{task_info['target_chat']}`\n\n"
+                f"🚨 **تحذير:** هذا الإجراء نهائي ولا يمكن التراجع عنه!\n\n"
+                f"❓ **هل أنت متأكد من حذف هذه المهمة؟**"
+            )
+            
+            keyboard = [
+                [Button.inline("🗑️ نعم، احذف المهمة", f"delete_confirmed_{task_id}".encode()),
+                 Button.inline("❌ إلغاء", b"multi_task_menu")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def edit_specific_task(self, event, task_id):
+        """Edit settings for a specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            task_info = task_stats.get(task_id)
+            
+            if not task_info:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            # Get task configuration if available
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            
+            status_emoji = "🟢" if task_info['status'] == 'running' else "🔴"
+            
+            text = (
+                f"⚙️ **إعدادات المهمة**\n\n"
+                f"📝 **اسم المهمة:** {task_info['name']}\n"
+                f"📊 **الحالة:** {status_emoji} {task_info['status']}\n"
+                f"📥 **المصدر:** `{task_info['source_chat']}`\n"
+                f"📤 **الهدف:** `{task_info['target_chat']}`\n\n"
+                f"🔧 **الإعدادات المتاحة:**"
+            )
+            
+            keyboard = [
+                [Button.inline("📝 تغيير الاسم", f"edit_name_{task_id}".encode()),
+                 Button.inline("📥 تغيير المصدر", f"edit_source_{task_id}".encode())],
+                [Button.inline("📤 تغيير الهدف", f"edit_target_{task_id}".encode()),
+                 Button.inline("⏱️ تأخير الإرسال", f"edit_delay_{task_id}".encode())],
+                [Button.inline("🎛️ فلاتر الوسائط", f"edit_filters_{task_id}".encode()),
+                 Button.inline("🔄 الاستبدال الذكي", f"edit_replacer_{task_id}".encode())],
+                [Button.inline("📝 رأس وتذييل", f"edit_header_footer_{task_id}".encode()),
+                 Button.inline("🔘 الأزرار المخصصة", f"edit_buttons_{task_id}".encode())],
+                [Button.inline("🚫 قائمة الحظر", f"edit_blacklist_{task_id}".encode()),
+                 Button.inline("✅ قائمة السماح", f"edit_whitelist_{task_id}".encode())],
+                [Button.inline("🔙 العودة", b"multi_task_menu")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def delete_task_confirmed(self, event, task_id):
+        """Execute task deletion after confirmation"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            # First stop the task if it's running
+            await self.forwarder_instance.stop_steering_task(task_id)
+            
+            # Then delete it
+            success = self.forwarder_instance.remove_steering_task(task_id)
+            
+            if success:
+                text = (
+                    "✅ **تم حذف المهمة بنجاح**\n\n"
+                    "🗑️ تم حذف المهمة وجميع إعداداتها نهائياً\n\n"
+                    "💡 يمكنك إنشاء مهمة جديدة في أي وقت"
+                )
+                
+                keyboard = [
+                    [Button.inline("➕ إضافة مهمة جديدة", b"add_task")],
+                    [Button.inline("📋 عرض المهام", b"view_tasks"),
+                     Button.inline("🔙 القائمة الرئيسية", b"multi_task_menu")]
+                ]
+                
+                await event.edit(text, buttons=keyboard)
+            else:
+                await event.answer("❌ فشل في حذف المهمة", alert=True)
+                await self.show_multi_task_menu(event)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ في حذف المهمة: {e}", alert=True)
+
     async def set_forwarder_instance(self, forwarder):
         """Set reference to the forwarder instance"""
         self.forwarder_instance = forwarder
