@@ -108,6 +108,7 @@ class ModernControlBot:
              Button.inline("⚙️ إعدادات البوت", b"settings")],
             [Button.inline("📈 لوحة الإحصائيات", b"stats_dashboard"),
              Button.inline("👀 عرض الإعدادات", b"view_settings")],
+            [Button.inline("🎯 إدارة المهام المتعددة", b"multi_task_menu")],
             *control_buttons,
             [Button.inline("📋 السجلات", b"logs"),
              Button.inline("❓ مطور البوت", b"help")]
@@ -375,6 +376,16 @@ class ModernControlBot:
             elif data == "clear_replacements":
                 await self.clear_replacements(event)
             
+            # Multi-task management callbacks
+            elif data == "multi_task_menu":
+                await self.show_multi_task_menu(event)
+            elif data == "view_tasks":
+                await self.view_tasks(event)
+            elif data == "task_stats":
+                await self.show_task_stats(event)
+            elif data == "add_task":
+                await self.prompt_add_task(event)
+            
             # Advanced settings callbacks
             elif data == "set_delay":
                 await self.prompt_delay_setting(event)
@@ -425,6 +436,8 @@ class ModernControlBot:
                     await self.process_button_url_input(event, button_num)
                 elif state == 'awaiting_replacement':
                     await self.process_replacement_input(event)
+                elif state in ['waiting_task_name', 'waiting_task_source', 'waiting_task_target']:
+                    await self.process_task_creation(event)
     
     async def show_main_menu(self, event):
         """Show main menu"""
@@ -2434,6 +2447,305 @@ class ModernControlBot:
         ]
         
         await event.edit(success_text, buttons=keyboard)
+
+    # Multi-Task Management Methods
+    
+    def get_multi_task_menu_keyboard(self):
+        """Get multi-task management keyboard"""
+        return [
+            [Button.inline("📋 عرض المهام", b"view_tasks"),
+             Button.inline("➕ إضافة مهمة", b"add_task")],
+            [Button.inline("▶️ تشغيل مهمة", b"start_task"),
+             Button.inline("⏹️ إيقاف مهمة", b"stop_task")],
+            [Button.inline("🔄 إعادة تشغيل مهمة", b"restart_task"),
+             Button.inline("🗑️ حذف مهمة", b"delete_task")],
+            [Button.inline("📊 إحصائيات المهام", b"task_stats"),
+             Button.inline("⚙️ إعدادات المهمة", b"edit_task")],
+            [Button.inline("🏠 القائمة الرئيسية", b"main_menu")]
+        ]
+    
+    async def show_multi_task_menu(self, event):
+        """Show multi-task management menu"""
+        try:
+            # Get task statistics from userbot if available
+            if self.forwarder_instance:
+                task_stats = self.forwarder_instance.get_task_stats()
+                total_tasks = len(task_stats)
+                running_tasks = sum(1 for t in task_stats.values() if t['status'] == 'running')
+                
+                text = (
+                    "🎯 **إدارة المهام المتعددة**\n\n"
+                    f"📊 **إحصائيات سريعة:**\n"
+                    f"• المهام الإجمالية: {total_tasks}\n"
+                    f"• المهام النشطة: {running_tasks}\n"
+                    f"• المهام المتوقفة: {total_tasks - running_tasks}\n\n"
+                    "⚡ **الوظائف المتاحة:**\n"
+                    "• إدارة مهام التوجيه\n"
+                    "• مراقبة الأداء\n"
+                    "• إعدادات فردية لكل مهمة"
+                )
+            else:
+                text = (
+                    "🎯 **إدارة المهام المتعددة**\n\n"
+                    "⚠️ **البوت الأساسي غير متصل**\n\n"
+                    "💡 يمكنك إعداد المهام، ولكن لن تعمل حتى يتم تشغيل البوت الأساسي"
+                )
+            
+            await event.edit(text, buttons=self.get_multi_task_menu_keyboard())
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض قائمة المهام: {e}")
+    
+    async def view_tasks(self, event):
+        """View all steering tasks"""
+        try:
+            if not self.forwarder_instance:
+                await event.edit(
+                    "❌ **البوت الأساسي غير متصل**\n\n"
+                    "يرجى تشغيل البوت الأساسي أولاً لعرض المهام",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            
+            if not task_stats:
+                text = (
+                    "📋 **قائمة المهام**\n\n"
+                    "🔍 **لا توجد مهام محددة**\n\n"
+                    "💡 استخدم 'إضافة مهمة' لإنشاء مهمة توجيه جديدة"
+                )
+            else:
+                text = "📋 **قائمة مهام التوجيه**\n\n"
+                
+                for task_id, stats in task_stats.items():
+                    status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                    text += f"{status_emoji} **{stats['name']}**\n"
+                    text += f"   📥 من: `{stats['source_chat']}`\n"
+                    text += f"   📤 إلى: `{stats['target_chat']}`\n"
+                    
+                    if stats['stats']:
+                        task_data = stats['stats']
+                        text += f"   📊 معالج: {task_data['messages_processed']}\n"
+                        text += f"   ✅ موجه: {task_data['messages_forwarded']}\n"
+                        text += f"   ❌ فشل: {task_data['messages_failed']}\n"
+                    
+                    text += "\n"
+            
+            keyboard = [
+                [Button.inline("➕ إضافة مهمة", b"add_task"),
+                 Button.inline("📊 إحصائيات تفصيلية", b"task_stats")],
+                [Button.inline("🔙 العودة", b"multi_task_menu")]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض المهام: {e}")
+    
+    async def show_task_stats(self, event):
+        """Show detailed task statistics"""
+        try:
+            if not self.forwarder_instance:
+                await event.edit(
+                    "❌ **البوت الأساسي غير متصل**",
+                    buttons=[[Button.inline("🔙 العودة", b"multi_task_menu")]]
+                )
+                return
+            
+            task_stats = self.forwarder_instance.get_task_stats()
+            
+            if not task_stats:
+                text = "📊 **لا توجد مهام للإحصائيات**"
+            else:
+                text = "📊 **إحصائيات مفصلة للمهام**\n\n"
+                
+                total_processed = 0
+                total_forwarded = 0
+                total_failed = 0
+                
+                for task_id, stats in task_stats.items():
+                    if stats['stats']:
+                        task_data = stats['stats']
+                        total_processed += task_data['messages_processed']
+                        total_forwarded += task_data['messages_forwarded']
+                        total_failed += task_data['messages_failed']
+                
+                success_rate = (total_forwarded / total_processed * 100) if total_processed > 0 else 0
+                
+                text += f"🎯 **الإحصائيات الإجمالية:**\n"
+                text += f"📝 الرسائل المعالجة: {total_processed}\n"
+                text += f"✅ الرسائل الموجهة: {total_forwarded}\n"
+                text += f"❌ الرسائل الفاشلة: {total_failed}\n"
+                text += f"📈 معدل النجاح: {success_rate:.1f}%\n\n"
+                
+                text += "📋 **تفاصيل كل مهمة:**\n\n"
+                
+                for task_id, stats in task_stats.items():
+                    status_emoji = "🟢" if stats['status'] == 'running' else "🔴"
+                    text += f"{status_emoji} **{stats['name']}**\n"
+                    
+                    if stats['stats']:
+                        task_data = stats['stats']
+                        task_success_rate = (task_data['messages_forwarded'] / task_data['messages_processed'] * 100) if task_data['messages_processed'] > 0 else 0
+                        text += f"   📊 معدل النجاح: {task_success_rate:.1f}%\n"
+                        text += f"   📝 معالج: {task_data['messages_processed']}\n"
+                        text += f"   ✅ موجه: {task_data['messages_forwarded']}\n"
+                        text += f"   ❌ فشل: {task_data['messages_failed']}\n"
+                        
+                        if task_data['last_activity']:
+                            from datetime import datetime
+                            last_activity = datetime.fromisoformat(task_data['last_activity']).strftime("%H:%M:%S")
+                            text += f"   🕒 آخر نشاط: {last_activity}\n"
+                    else:
+                        text += "   📊 لا توجد إحصائيات (متوقف)\n"
+                    
+                    text += "\n"
+            
+            keyboard = [[Button.inline("🔄 تحديث", b"task_stats"),
+                        Button.inline("🔙 العودة", b"multi_task_menu")]]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.edit(f"❌ خطأ في عرض الإحصائيات: {e}")
+    
+    async def prompt_add_task(self, event):
+        """Prompt user to add a new task"""
+        self.user_states[event.sender_id] = "waiting_task_name"
+        
+        text = (
+            "➕ **إضافة مهمة توجيه جديدة**\n\n"
+            "📝 **الخطوة 1: اسم المهمة**\n\n"
+            "أرسل اسماً وصفياً للمهمة الجديدة:\n\n"
+            "💡 **أمثلة:**\n"
+            "• توجيه الأخبار\n"
+            "• نسخ المحتوى التقني\n"
+            "• توجيه من قناة A إلى قناة B\n\n"
+            "🚫 **إلغاء:** أرسل 'إلغاء'"
+        )
+        
+        keyboard = [[Button.inline("❌ إلغاء", b"multi_task_menu")]]
+        await event.edit(text, buttons=keyboard)
+    
+    async def process_task_creation(self, event):
+        """Process task creation steps"""
+        user_id = event.sender_id
+        state = self.user_states.get(user_id, "")
+        text = event.text.strip()
+        
+        if text.lower() == 'إلغاء':
+            if user_id in self.user_states:
+                del self.user_states[user_id]
+            await self.show_multi_task_menu(event)
+            return
+        
+        try:
+            if state == "waiting_task_name":
+                # Store task name and ask for source
+                if not hasattr(self, 'temp_task_data'):
+                    self.temp_task_data = {}
+                
+                self.temp_task_data[user_id] = {'name': text}
+                self.user_states[user_id] = "waiting_task_source"
+                
+                await event.respond(
+                    f"✅ **اسم المهمة:** {text}\n\n"
+                    "📥 **الخطوة 2: القناة المصدر**\n\n"
+                    "أرسل معرف أو رابط القناة المصدر:\n\n"
+                    "💡 **تنسيقات مقبولة:**\n"
+                    "• معرف رقمي: `-1001234567890`\n"
+                    "• اسم مستخدم: `@channel_name`\n"
+                    "• رابط: `https://t.me/channel_name`\n\n"
+                    "🚫 **إلغاء:** أرسل 'إلغاء'"
+                )
+            
+            elif state == "waiting_task_source":
+                # Store source and ask for target
+                self.temp_task_data[user_id]['source_chat'] = text
+                self.user_states[user_id] = "waiting_task_target"
+                
+                await event.respond(
+                    f"✅ **القناة المصدر:** `{text}`\n\n"
+                    "📤 **الخطوة 3: القناة الهدف**\n\n"
+                    "أرسل معرف أو رابط القناة الهدف:\n\n"
+                    "💡 **تنسيقات مقبولة:**\n"
+                    "• معرف رقمي: `-1001234567890`\n"
+                    "• اسم مستخدم: `@channel_name`\n"
+                    "• رابط: `https://t.me/channel_name`\n\n"
+                    "🚫 **إلغاء:** أرسل 'إلغاء'"
+                )
+            
+            elif state == "waiting_task_target":
+                # Complete task creation
+                self.temp_task_data[user_id]['target_chat'] = text
+                await self.create_new_task(event, user_id)
+            
+        except Exception as e:
+            await event.respond(f"❌ خطأ في إنشاء المهمة: {e}")
+            if user_id in self.user_states:
+                del self.user_states[user_id]
+    
+    async def create_new_task(self, event, user_id):
+        """Create a new steering task"""
+        try:
+            task_data = self.temp_task_data[user_id]
+            
+            # Generate unique task ID
+            import time
+            import uuid
+            task_id = f"task_{int(time.time())}_{str(uuid.uuid4())[:8]}"
+            
+            # Create task configuration
+            from userbot import SteeringTaskConfig
+            config = SteeringTaskConfig(
+                task_id=task_id,
+                name=task_data['name'],
+                source_chat=task_data['source_chat'],
+                target_chat=task_data['target_chat'],
+                enabled=True
+            )
+            
+            # Add task to forwarder if available
+            if self.forwarder_instance:
+                self.forwarder_instance.add_steering_task(config)
+                
+                # Try to start the task
+                success = await self.forwarder_instance.start_steering_task(task_id)
+                status_text = "✅ تم إنشاء وتشغيل المهمة" if success else "⚠️ تم إنشاء المهمة ولكن فشل في التشغيل"
+            else:
+                status_text = "✅ تم إنشاء المهمة (ستعمل عند تشغيل البوت الأساسي)"
+            
+            # Clean up
+            del self.temp_task_data[user_id]
+            del self.user_states[user_id]
+            
+            # Show success message
+            text = (
+                f"🎉 **{status_text}**\n\n"
+                f"📝 **اسم المهمة:** {task_data['name']}\n"
+                f"📥 **المصدر:** `{task_data['source_chat']}`\n"
+                f"📤 **الهدف:** `{task_data['target_chat']}`\n"
+                f"🆔 **معرف المهمة:** `{task_id}`\n\n"
+                "🚀 **المهمة جاهزة للعمل!**"
+            )
+            
+            keyboard = [
+                [Button.inline("📋 عرض المهام", b"view_tasks")],
+                [Button.inline("🔙 إدارة المهام", b"multi_task_menu")]
+            ]
+            
+            await event.respond(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.respond(f"❌ خطأ في إنشاء المهمة: {e}")
+            if user_id in self.user_states:
+                del self.user_states[user_id]
+    
+    async def set_forwarder_instance(self, forwarder):
+        """Set reference to the forwarder instance"""
+        self.forwarder_instance = forwarder
+        self.logger.info("Forwarder instance connected to control bot")
 
     async def run_until_disconnected(self):
         """Keep the bot running"""
