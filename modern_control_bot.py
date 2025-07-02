@@ -475,6 +475,83 @@ class ModernControlBot:
                 task_id = data.replace("toggle_task_blacklist_", "")
                 await self.toggle_task_blacklist(event, task_id)
             
+            # Task-specific detailed callbacks for replacements
+            elif data.startswith("add_task_replacement_"):
+                task_id = data.replace("add_task_replacement_", "")
+                await self.prompt_add_task_replacement(event, task_id)
+            elif data.startswith("view_task_replacements_"):
+                task_id = data.replace("view_task_replacements_", "")
+                await self.view_task_replacements(event, task_id)
+            elif data.startswith("clear_task_replacements_"):
+                task_id = data.replace("clear_task_replacements_", "")
+                await self.clear_task_replacements(event, task_id)
+            
+            # Task-specific button callbacks
+            elif data.startswith("edit_task_button_"):
+                parts = data.replace("edit_task_button_", "").split("_")
+                task_id = "_".join(parts[:-1])
+                button_num = parts[-1]
+                await self.prompt_edit_task_button(event, task_id, button_num)
+            elif data.startswith("clear_task_buttons_"):
+                task_id = data.replace("clear_task_buttons_", "")
+                await self.clear_task_buttons(event, task_id)
+            elif data.startswith("preview_task_buttons_"):
+                task_id = data.replace("preview_task_buttons_", "")
+                await self.preview_task_buttons(event, task_id)
+            
+            # Task-specific header/footer callbacks
+            elif data.startswith("edit_task_header_text_"):
+                task_id = data.replace("edit_task_header_text_", "")
+                await self.prompt_edit_task_header(event, task_id)
+            elif data.startswith("edit_task_footer_text_"):
+                task_id = data.replace("edit_task_footer_text_", "")
+                await self.prompt_edit_task_footer(event, task_id)
+            elif data.startswith("clear_task_header_"):
+                task_id = data.replace("clear_task_header_", "")
+                await self.clear_task_header(event, task_id)
+            elif data.startswith("clear_task_footer_"):
+                task_id = data.replace("clear_task_footer_", "")
+                await self.clear_task_footer(event, task_id)
+            
+            # Task-specific blacklist/whitelist callbacks
+            elif data.startswith("add_task_blacklist_"):
+                task_id = data.replace("add_task_blacklist_", "")
+                await self.prompt_add_task_blacklist(event, task_id)
+            elif data.startswith("view_task_blacklist_"):
+                task_id = data.replace("view_task_blacklist_", "")
+                await self.view_task_blacklist(event, task_id)
+            elif data.startswith("clear_task_blacklist_"):
+                task_id = data.replace("clear_task_blacklist_", "")
+                await self.clear_task_blacklist(event, task_id)
+            elif data.startswith("add_task_whitelist_"):
+                task_id = data.replace("add_task_whitelist_", "")
+                await self.prompt_add_task_whitelist(event, task_id)
+            elif data.startswith("view_task_whitelist_"):
+                task_id = data.replace("view_task_whitelist_", "")
+                await self.view_task_whitelist(event, task_id)
+            elif data.startswith("clear_task_whitelist_"):
+                task_id = data.replace("clear_task_whitelist_", "")
+                await self.clear_task_whitelist(event, task_id)
+            
+            # Task-specific clean words callbacks
+            elif data.startswith("edit_task_clean_words_"):
+                task_id = data.replace("edit_task_clean_words_", "")
+                await self.edit_task_clean_words(event, task_id)
+            
+            # Task naming, source/target change callbacks
+            elif data.startswith("edit_task_name_"):
+                task_id = data.replace("edit_task_name_", "")
+                await self.prompt_edit_task_name(event, task_id)
+            elif data.startswith("edit_source_"):
+                task_id = data.replace("edit_source_", "")
+                await self.prompt_edit_task_source(event, task_id)
+            elif data.startswith("edit_target_"):
+                task_id = data.replace("edit_target_", "")
+                await self.prompt_edit_task_target(event, task_id)
+            elif data.startswith("edit_delay_"):
+                task_id = data.replace("edit_delay_", "")
+                await self.prompt_edit_task_delay(event, task_id)
+            
             # Advanced settings callbacks
             elif data == "set_delay":
                 await self.prompt_delay_setting(event)
@@ -527,6 +604,44 @@ class ModernControlBot:
                     await self.process_replacement_input(event)
                 elif state in ['waiting_task_name', 'waiting_task_source', 'waiting_task_target']:
                     await self.process_task_creation(event)
+                # Task-specific input handlers
+                elif state.startswith("task_replacement_"):
+                    task_id = state.replace("task_replacement_", "")
+                    await self.process_task_replacement_input(event, task_id)
+                elif state.startswith("task_button_") and state.endswith("_text"):
+                    parts = state.replace("task_button_", "").replace("_text", "").split("_")
+                    task_id = "_".join(parts[:-1])
+                    button_num = parts[-1]
+                    await self.process_task_button_text_input(event, task_id, button_num)
+                elif state.startswith("task_button_") and state.endswith("_url"):
+                    parts = state.replace("task_button_", "").replace("_url", "").split("_")
+                    task_id = "_".join(parts[:-1])
+                    button_num = parts[-1]
+                    await self.process_task_button_url_input(event, task_id, button_num)
+                elif state.startswith("task_header_"):
+                    task_id = state.replace("task_header_", "")
+                    await self.process_task_header_input(event, task_id)
+                elif state.startswith("task_footer_"):
+                    task_id = state.replace("task_footer_", "")
+                    await self.process_task_footer_input(event, task_id)
+                elif state.startswith("task_blacklist_"):
+                    task_id = state.replace("task_blacklist_", "")
+                    await self.process_task_blacklist_input(event, task_id)
+                elif state.startswith("task_whitelist_"):
+                    task_id = state.replace("task_whitelist_", "")
+                    await self.process_task_whitelist_input(event, task_id)
+                elif state.startswith("task_name_"):
+                    task_id = state.replace("task_name_", "")
+                    await self.process_task_name_input(event, task_id)
+                elif state.startswith("task_source_"):
+                    task_id = state.replace("task_source_", "")
+                    await self.process_task_source_input(event, task_id)
+                elif state.startswith("task_target_"):
+                    task_id = state.replace("task_target_", "")
+                    await self.process_task_target_input(event, task_id)
+                elif state.startswith("task_delay_"):
+                    task_id = state.replace("task_delay_", "")
+                    await self.process_task_delay_input(event, task_id)
     
     async def show_main_menu(self, event):
         """Show main menu"""
@@ -3809,6 +3924,892 @@ class ModernControlBot:
                 
         except Exception as e:
             await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Additional task-specific functions for replacements
+    async def prompt_add_task_replacement(self, event, task_id):
+        """Prompt user to add replacement for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_replacement_{task_id}'
+            
+            text = (
+                f"🔄 **إضافة استبدال جديد للمهمة**\n\n"
+                f"💡 **تنسيق الاستبدال:**\n"
+                f"`النص القديم -> النص الجديد`\n\n"
+                f"📝 **مثال:**\n"
+                f"`سلام عليكم -> أهلاً وسهلاً`\n\n"
+                f"✏️ **أرسل الاستبدال الآن:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_smart_replacer_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def view_task_replacements(self, event, task_id):
+        """View all replacements for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            replacements_list = []
+            if task_config.replacements:
+                replacements_list = [r.strip() for r in task_config.replacements.split(',') if r.strip() and '->' in r]
+            
+            if not replacements_list:
+                text = (
+                    f"📋 **استبدالات المهمة**\n\n"
+                    f"📝 **المهمة:** {task_config.name}\n\n"
+                    f"⚠️ **لا توجد استبدالات محفوظة**\n\n"
+                    f"💡 **أضف استبدالات جديدة لبدء استخدام هذه الميزة**"
+                )
+            else:
+                text = (
+                    f"📋 **استبدالات المهمة** ({len(replacements_list)})\n\n"
+                    f"📝 **المهمة:** {task_config.name}\n\n"
+                )
+                for i, replacement in enumerate(replacements_list, 1):
+                    text += f"{i}. `{replacement}`\n"
+            
+            keyboard = [
+                [Button.inline("➕ إضافة استبدال", f"add_task_replacement_{task_id}".encode()),
+                 Button.inline("🗑️ مسح الكل", f"clear_task_replacements_{task_id}".encode())],
+                [Button.inline("🔙 العودة", f"edit_smart_replacer_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def clear_task_replacements(self, event, task_id):
+        """Clear all replacements for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, replacements="")
+            if success:
+                await event.answer("✅ تم حذف جميع الاستبدالات", alert=False)
+                await self.edit_task_smart_replacer(event, task_id)
+            else:
+                await event.answer("❌ فشل في حذف الاستبدالات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Task-specific button functions
+    async def prompt_edit_task_button(self, event, task_id, button_num):
+        """Prompt user to edit button for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_button_{task_id}_{button_num}_text'
+            
+            text = (
+                f"🔘 **تعديل الزر رقم {button_num} للمهمة**\n\n"
+                f"📝 **أرسل نص الزر:**\n"
+                f"💡 **مثال:** اشترك في القناة\n\n"
+                f"✏️ **أرسل النص الآن:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_custom_buttons_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def clear_task_buttons(self, event, task_id):
+        """Clear all buttons for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(
+                task_id, 
+                button1_text="", button1_url="",
+                button2_text="", button2_url="",
+                button3_text="", button3_url=""
+            )
+            
+            if success:
+                await event.answer("✅ تم حذف جميع الأزرار", alert=False)
+                await self.edit_task_custom_buttons(event, task_id)
+            else:
+                await event.answer("❌ فشل في حذف الأزرار", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def preview_task_buttons(self, event, task_id):
+        """Preview buttons for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            preview_buttons = []
+            if task_config.button1_text and task_config.button1_url:
+                preview_buttons.append([Button.url(task_config.button1_text, task_config.button1_url)])
+            if task_config.button2_text and task_config.button2_url:
+                preview_buttons.append([Button.url(task_config.button2_text, task_config.button2_url)])
+            if task_config.button3_text and task_config.button3_url:
+                preview_buttons.append([Button.url(task_config.button3_text, task_config.button3_url)])
+            
+            preview_buttons.append([Button.inline("🔙 العودة", f"edit_custom_buttons_{task_id}".encode())])
+            
+            text = (
+                f"👀 **معاينة أزرار المهمة**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n\n"
+                f"🔘 **هذه هي الأزرار التي ستظهر مع الرسائل:**"
+            )
+            
+            await event.edit(text, buttons=preview_buttons)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Task-specific header/footer functions
+    async def prompt_edit_task_header(self, event, task_id):
+        """Prompt user to edit header for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_header_{task_id}'
+            
+            text = (
+                f"📝 **تعديل رأس المهمة**\n\n"
+                f"💡 **الرأس هو نص يُضاف في بداية كل رسالة**\n\n"
+                f"📝 **مثال:**\n"
+                f"`📢 إعلان مهم:`\n"
+                f"`🔥 عاجل:`\n\n"
+                f"✏️ **أرسل نص الرأس الآن:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_header_footer_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def prompt_edit_task_footer(self, event, task_id):
+        """Prompt user to edit footer for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_footer_{task_id}'
+            
+            text = (
+                f"📝 **تعديل تذييل المهمة**\n\n"
+                f"💡 **التذييل هو نص يُضاف في نهاية كل رسالة**\n\n"
+                f"📝 **مثال:**\n"
+                f"`📱 تابعونا على تليجرام`\n"
+                f"`🔗 @YourChannel`\n\n"
+                f"✏️ **أرسل نص التذييل الآن:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_header_footer_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def clear_task_header(self, event, task_id):
+        """Clear header for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, header_text="", header_enabled=False)
+            if success:
+                await event.answer("✅ تم حذف الرأس", alert=False)
+                await self.edit_task_header_footer(event, task_id)
+            else:
+                await event.answer("❌ فشل في حذف الرأس", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def clear_task_footer(self, event, task_id):
+        """Clear footer for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, footer_text="", footer_enabled=False)
+            if success:
+                await event.answer("✅ تم حذف التذييل", alert=False)
+                await self.edit_task_header_footer(event, task_id)
+            else:
+                await event.answer("❌ فشل في حذف التذييل", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Task-specific blacklist/whitelist functions
+    async def prompt_add_task_blacklist(self, event, task_id):
+        """Prompt user to add blacklist words for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_blacklist_{task_id}'
+            
+            text = (
+                f"🚫 **إضافة كلمات للحظر**\n\n"
+                f"💡 **يفصل بين الكلمات بفاصلة**\n\n"
+                f"📝 **مثال:**\n"
+                f"`إعلان, دعاية, سبام`\n\n"
+                f"✏️ **أرسل الكلمات الآن:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_block_list_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def view_task_blacklist(self, event, task_id):
+        """View blacklist words for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            blacklist_words = task_config.blacklist_words.split(',') if task_config.blacklist_words else []
+            blacklist_words = [word.strip() for word in blacklist_words if word.strip()]
+            
+            if not blacklist_words:
+                text = (
+                    f"🚫 **قائمة الحظر للمهمة**\n\n"
+                    f"📝 **المهمة:** {task_config.name}\n\n"
+                    f"⚠️ **لا توجد كلمات محظورة**\n\n"
+                    f"💡 **أضف كلمات للحظر لبدء استخدام هذه الميزة**"
+                )
+            else:
+                text = (
+                    f"🚫 **قائمة الحظر للمهمة** ({len(blacklist_words)})\n\n"
+                    f"📝 **المهمة:** {task_config.name}\n\n"
+                    f"📋 **الكلمات المحظورة:**\n"
+                )
+                for i, word in enumerate(blacklist_words, 1):
+                    text += f"{i}. `{word}`\n"
+            
+            keyboard = [
+                [Button.inline("➕ إضافة كلمات", f"add_task_blacklist_{task_id}".encode()),
+                 Button.inline("🗑️ مسح الكل", f"clear_task_blacklist_{task_id}".encode())],
+                [Button.inline("🔙 العودة", f"edit_block_list_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def clear_task_blacklist(self, event, task_id):
+        """Clear blacklist for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, blacklist_words="")
+            if success:
+                await event.answer("✅ تم حذف جميع الكلمات المحظورة", alert=False)
+                await self.edit_task_block_list(event, task_id)
+            else:
+                await event.answer("❌ فشل في حذف القائمة", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def prompt_add_task_whitelist(self, event, task_id):
+        """Prompt user to add whitelist words for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_whitelist_{task_id}'
+            
+            text = (
+                f"✅ **إضافة كلمات للسماح**\n\n"
+                f"💡 **يفصل بين الكلمات بفاصلة**\n\n"
+                f"📝 **مثال:**\n"
+                f"`مهم, عاجل, خبر`\n\n"
+                f"✏️ **أرسل الكلمات الآن:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_allow_list_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def view_task_whitelist(self, event, task_id):
+        """View whitelist words for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            whitelist_words = task_config.whitelist_words.split(',') if task_config.whitelist_words else []
+            whitelist_words = [word.strip() for word in whitelist_words if word.strip()]
+            
+            if not whitelist_words:
+                text = (
+                    f"✅ **قائمة السماح للمهمة**\n\n"
+                    f"📝 **المهمة:** {task_config.name}\n\n"
+                    f"⚠️ **لا توجد كلمات مسموحة**\n\n"
+                    f"💡 **أضف كلمات للسماح لبدء استخدام هذه الميزة**"
+                )
+            else:
+                text = (
+                    f"✅ **قائمة السماح للمهمة** ({len(whitelist_words)})\n\n"
+                    f"📝 **المهمة:** {task_config.name}\n\n"
+                    f"📋 **الكلمات المسموحة:**\n"
+                )
+                for i, word in enumerate(whitelist_words, 1):
+                    text += f"{i}. `{word}`\n"
+            
+            keyboard = [
+                [Button.inline("➕ إضافة كلمات", f"add_task_whitelist_{task_id}".encode()),
+                 Button.inline("🗑️ مسح الكل", f"clear_task_whitelist_{task_id}".encode())],
+                [Button.inline("🔙 العودة", f"edit_allow_list_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def clear_task_whitelist(self, event, task_id):
+        """Clear whitelist for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, whitelist_words="")
+            if success:
+                await event.answer("✅ تم حذف جميع الكلمات المسموحة", alert=False)
+                await self.edit_task_allow_list(event, task_id)
+            else:
+                await event.answer("❌ فشل في حذف القائمة", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Task-specific clean words function
+    async def edit_task_clean_words(self, event, task_id):
+        """Edit clean words for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            clean_words = getattr(task_config, 'clean_words', '').split(',') if hasattr(task_config, 'clean_words') and task_config.clean_words else []
+            clean_words = [word.strip() for word in clean_words if word.strip()]
+            
+            text = (
+                f"🧹 **الكلمات المحظورة في التنظيف**\n\n"
+                f"📝 **المهمة:** {task_config.name}\n\n"
+                f"💡 **الأسطر التي تحتوي على هذه الكلمات سيتم حذفها**\n\n"
+            )
+            
+            if clean_words:
+                text += f"📋 **الكلمات الحالية:** ({len(clean_words)})\n"
+                for i, word in enumerate(clean_words[:10], 1):
+                    text += f"{i}. `{word}`\n"
+                if len(clean_words) > 10:
+                    text += f"... و {len(clean_words) - 10} كلمة أخرى\n"
+            else:
+                text += "⚠️ **لا توجد كلمات محددة**\n"
+            
+            keyboard = [
+                [Button.inline("➕ إضافة كلمات", f"add_task_clean_words_{task_id}".encode()),
+                 Button.inline("📋 عرض الكل", f"view_task_clean_words_{task_id}".encode())],
+                [Button.inline("🗑️ مسح الكل", f"clear_task_clean_words_{task_id}".encode())],
+                [Button.inline("🔙 العودة", f"edit_text_cleaner_{task_id}".encode())]
+            ]
+            
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Task management functions (name, source, target, delay)
+    async def prompt_edit_task_name(self, event, task_id):
+        """Prompt user to edit task name"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_name_{task_id}'
+            
+            text = (
+                f"📝 **تغيير اسم المهمة**\n\n"
+                f"💡 **اختر اسماً وصفياً للمهمة**\n\n"
+                f"📝 **مثال:**\n"
+                f"`أخبار القناة الرسمية`\n"
+                f"`توجيه المحتوى الترفيهي`\n\n"
+                f"✏️ **أرسل الاسم الجديد:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_specific_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def prompt_edit_task_source(self, event, task_id):
+        """Prompt user to edit task source"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_source_{task_id}'
+            
+            text = (
+                f"📥 **تغيير مصدر المهمة**\n\n"
+                f"💡 **أرسل معرف القناة أو المجموعة المصدر**\n\n"
+                f"📝 **الصيغ المقبولة:**\n"
+                f"`@channel_username`\n"
+                f"`-1001234567890` (معرف رقمي)\n"
+                f"`https://t.me/channel_name`\n\n"
+                f"✏️ **أرسل المصدر الجديد:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_specific_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def prompt_edit_task_target(self, event, task_id):
+        """Prompt user to edit task target"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_target_{task_id}'
+            
+            text = (
+                f"📤 **تغيير هدف المهمة**\n\n"
+                f"💡 **أرسل معرف القناة أو المجموعة الهدف**\n\n"
+                f"📝 **الصيغ المقبولة:**\n"
+                f"`@channel_username`\n"
+                f"`-1001234567890` (معرف رقمي)\n"
+                f"`https://t.me/channel_name`\n\n"
+                f"✏️ **أرسل الهدف الجديد:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_specific_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def prompt_edit_task_delay(self, event, task_id):
+        """Prompt user to edit task delay"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            self.user_states[event.sender_id] = f'task_delay_{task_id}'
+            
+            text = (
+                f"⏱️ **تأخير الإرسال للمهمة**\n\n"
+                f"💡 **التأخير بين كل رسالة والتي تليها**\n\n"
+                f"📝 **أرسل التأخير بالثواني:**\n"
+                f"`0` - بدون تأخير\n"
+                f"`5` - 5 ثوانِ\n"
+                f"`30` - 30 ثانية\n"
+                f"`60` - دقيقة واحدة\n\n"
+                f"✏️ **أرسل التأخير الآن:**"
+            )
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_specific_{task_id}".encode())]]
+            await event.edit(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Input processing functions for task-specific operations
+    async def process_task_replacement_input(self, event, task_id):
+        """Process replacement input for specific task"""
+        try:
+            replacement_text = event.message.text.strip()
+            
+            if '->' not in replacement_text:
+                await event.respond("❌ تنسيق خاطئ! استخدم: `النص القديم -> النص الجديد`")
+                return
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            current_replacements = task_config.replacements if task_config and task_config.replacements else ""
+            
+            if current_replacements:
+                new_replacements = f"{current_replacements},{replacement_text}"
+            else:
+                new_replacements = replacement_text
+            
+            success = self.forwarder_instance.update_task_config(task_id, replacements=new_replacements)
+            
+            if success:
+                await event.respond(f"✅ تم إضافة الاستبدال: `{replacement_text}`")
+                del self.user_states[event.sender_id]
+                await self.edit_task_smart_replacer(event, task_id)
+            else:
+                await event.respond("❌ فشل في إضافة الاستبدال")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_button_text_input(self, event, task_id, button_num):
+        """Process button text input for specific task"""
+        try:
+            button_text = event.message.text.strip()
+            
+            if len(button_text) > 50:
+                await event.respond("❌ نص الزر طويل جداً! (الحد الأقصى 50 حرف)")
+                return
+            
+            # Now ask for URL
+            self.user_states[event.sender_id] = f'task_button_{task_id}_{button_num}_url'
+            
+            text = (
+                f"🔗 **رابط الزر رقم {button_num}**\n\n"
+                f"📝 **نص الزر:** {button_text}\n\n"
+                f"💡 **أرسل رابط الزر:**\n"
+                f"مثال: `https://t.me/yourchannel`\n\n"
+                f"✏️ **أرسل الرابط الآن:**"
+            )
+            
+            # Store button text temporarily
+            if not hasattr(self, 'temp_button_data'):
+                self.temp_button_data = {}
+            self.temp_button_data[f'{task_id}_{button_num}'] = button_text
+            
+            keyboard = [[Button.inline("❌ إلغاء", f"edit_custom_buttons_{task_id}".encode())]]
+            await event.respond(text, buttons=keyboard)
+            
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_button_url_input(self, event, task_id, button_num):
+        """Process button URL input for specific task"""
+        try:
+            button_url = event.message.text.strip()
+            
+            if not button_url.startswith(('http://', 'https://', 't.me')):
+                await event.respond("❌ رابط غير صحيح! يجب أن يبدأ بـ http:// أو https:// أو t.me")
+                return
+            
+            # Get stored button text
+            if not hasattr(self, 'temp_button_data'):
+                self.temp_button_data = {}
+            
+            button_text = self.temp_button_data.get(f'{task_id}_{button_num}', '')
+            
+            if not button_text:
+                await event.respond("❌ خطأ في البيانات المؤقتة")
+                return
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            # Update button config
+            update_data = {}
+            update_data[f'button{button_num}_text'] = button_text
+            update_data[f'button{button_num}_url'] = button_url
+            
+            success = self.forwarder_instance.update_task_config(task_id, **update_data)
+            
+            if success:
+                await event.respond(f"✅ تم حفظ الزر رقم {button_num}")
+                del self.user_states[event.sender_id]
+                del self.temp_button_data[f'{task_id}_{button_num}']
+                await self.edit_task_custom_buttons(event, task_id)
+            else:
+                await event.respond("❌ فشل في حفظ الزر")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_header_input(self, event, task_id):
+        """Process header input for specific task"""
+        try:
+            header_text = event.message.text.strip()
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            success = self.forwarder_instance.update_task_config(
+                task_id, 
+                header_text=header_text, 
+                header_enabled=True
+            )
+            
+            if success:
+                await event.respond(f"✅ تم حفظ الرأس: `{header_text[:50]}...`")
+                del self.user_states[event.sender_id]
+                await self.edit_task_header_footer(event, task_id)
+            else:
+                await event.respond("❌ فشل في حفظ الرأس")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_footer_input(self, event, task_id):
+        """Process footer input for specific task"""
+        try:
+            footer_text = event.message.text.strip()
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            success = self.forwarder_instance.update_task_config(
+                task_id, 
+                footer_text=footer_text, 
+                footer_enabled=True
+            )
+            
+            if success:
+                await event.respond(f"✅ تم حفظ التذييل: `{footer_text[:50]}...`")
+                del self.user_states[event.sender_id]
+                await self.edit_task_header_footer(event, task_id)
+            else:
+                await event.respond("❌ فشل في حفظ التذييل")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_blacklist_input(self, event, task_id):
+        """Process blacklist input for specific task"""
+        try:
+            words_text = event.message.text.strip()
+            words = [word.strip() for word in words_text.split(',') if word.strip()]
+            
+            if not words:
+                await event.respond("❌ لم يتم إدخال كلمات صحيحة")
+                return
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            current_words = task_config.blacklist_words if task_config and task_config.blacklist_words else ""
+            
+            if current_words:
+                new_words = f"{current_words},{','.join(words)}"
+            else:
+                new_words = ','.join(words)
+            
+            success = self.forwarder_instance.update_task_config(task_id, blacklist_words=new_words)
+            
+            if success:
+                await event.respond(f"✅ تم إضافة {len(words)} كلمة للحظر")
+                del self.user_states[event.sender_id]
+                await self.edit_task_block_list(event, task_id)
+            else:
+                await event.respond("❌ فشل في إضافة الكلمات")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_whitelist_input(self, event, task_id):
+        """Process whitelist input for specific task"""
+        try:
+            words_text = event.message.text.strip()
+            words = [word.strip() for word in words_text.split(',') if word.strip()]
+            
+            if not words:
+                await event.respond("❌ لم يتم إدخال كلمات صحيحة")
+                return
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            current_words = task_config.whitelist_words if task_config and task_config.whitelist_words else ""
+            
+            if current_words:
+                new_words = f"{current_words},{','.join(words)}"
+            else:
+                new_words = ','.join(words)
+            
+            success = self.forwarder_instance.update_task_config(task_id, whitelist_words=new_words)
+            
+            if success:
+                await event.respond(f"✅ تم إضافة {len(words)} كلمة للسماح")
+                del self.user_states[event.sender_id]
+                await self.edit_task_allow_list(event, task_id)
+            else:
+                await event.respond("❌ فشل في إضافة الكلمات")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_name_input(self, event, task_id):
+        """Process task name input"""
+        try:
+            new_name = event.message.text.strip()
+            
+            if len(new_name) < 3:
+                await event.respond("❌ اسم المهمة قصير جداً! (أقل من 3 أحرف)")
+                return
+            
+            if len(new_name) > 50:
+                await event.respond("❌ اسم المهمة طويل جداً! (أكثر من 50 حرف)")
+                return
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, name=new_name)
+            
+            if success:
+                await event.respond(f"✅ تم تغيير اسم المهمة إلى: `{new_name}`")
+                del self.user_states[event.sender_id]
+                await self.edit_specific_task(event, task_id)
+            else:
+                await event.respond("❌ فشل في تغيير اسم المهمة")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_source_input(self, event, task_id):
+        """Process task source input"""
+        try:
+            new_source = event.message.text.strip()
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, source_chat=new_source)
+            
+            if success:
+                await event.respond(f"✅ تم تغيير المصدر إلى: `{new_source}`")
+                del self.user_states[event.sender_id]
+                await self.edit_specific_task(event, task_id)
+            else:
+                await event.respond("❌ فشل في تغيير المصدر")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_target_input(self, event, task_id):
+        """Process task target input"""
+        try:
+            new_target = event.message.text.strip()
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, target_chat=new_target)
+            
+            if success:
+                await event.respond(f"✅ تم تغيير الهدف إلى: `{new_target}`")
+                del self.user_states[event.sender_id]
+                await self.edit_specific_task(event, task_id)
+            else:
+                await event.respond("❌ فشل في تغيير الهدف")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
+
+    async def process_task_delay_input(self, event, task_id):
+        """Process task delay input"""
+        try:
+            delay_text = event.message.text.strip()
+            
+            try:
+                delay_seconds = int(delay_text)
+            except ValueError:
+                await event.respond("❌ يجب إدخال رقم صحيح للتأخير")
+                return
+            
+            if delay_seconds < 0:
+                await event.respond("❌ التأخير لا يمكن أن يكون سالباً")
+                return
+            
+            if delay_seconds > 3600:  # Max 1 hour
+                await event.respond("❌ التأخير كبير جداً! (الحد الأقصى 3600 ثانية)")
+                return
+            
+            if not self.forwarder_instance:
+                await event.respond("❌ البوت الأساسي غير متصل")
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, forward_delay=delay_seconds)
+            
+            if success:
+                delay_text = f"{delay_seconds} ثانية" if delay_seconds > 0 else "بدون تأخير"
+                await event.respond(f"✅ تم تعديل التأخير إلى: {delay_text}")
+                del self.user_states[event.sender_id]
+                await self.edit_specific_task(event, task_id)
+            else:
+                await event.respond("❌ فشل في تعديل التأخير")
+                
+        except Exception as e:
+            await event.respond(f"❌ خطأ: {e}")
 
 async def main():
     """Main function"""
