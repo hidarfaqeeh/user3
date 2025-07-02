@@ -3332,18 +3332,45 @@ class ModernControlBot:
             )
             
             keyboard = [
+                # المجموعة الأولى: الإعدادات الأساسية
                 [Button.inline("⚙️ وضع التوجيه", f"edit_forward_mode_{task_id}".encode()),
                  Button.inline("📥 تغيير المصدر", f"edit_source_{task_id}".encode())],
                 [Button.inline("📤 تغيير الهدف", f"edit_target_{task_id}".encode()),
-                 Button.inline("🧹 منظف النصوص", f"edit_text_cleaner_{task_id}".encode())],
+                 Button.inline("📝 تغيير الاسم", f"edit_task_name_{task_id}".encode())],
+                
+                # المجموعة الثانية: الفلاتر المتقدمة
                 [Button.inline("🎛️ فلاتر الوسائط", f"edit_media_filters_{task_id}".encode()),
-                 Button.inline("🔄 الاستبدال الذكي", f"edit_smart_replacer_{task_id}".encode())],
-                [Button.inline("🔘 الأزرار المخصصة", f"edit_custom_buttons_{task_id}".encode()),
-                 Button.inline("📝 رأس وتذييل", f"edit_header_footer_{task_id}".encode())],
+                 Button.inline("🌐 فلتر اللغة", f"edit_language_filter_{task_id}".encode())],
+                [Button.inline("🔗 فلتر الروابط", f"edit_link_filter_{task_id}".encode()),
+                 Button.inline("↩️ فلتر المعاد توجيهها", f"edit_forwarded_filter_{task_id}".encode())],
+                [Button.inline("👥 فلتر المشرفين", f"edit_admin_filter_{task_id}".encode()),
+                 Button.inline("📏 فلتر حد الأحرف", f"edit_char_limit_{task_id}".encode())],
+                [Button.inline("🔄 فلتر التكرار", f"edit_duplicate_filter_{task_id}".encode()),
+                 Button.inline("🔘 فلتر الأزرار الشفافة", f"edit_transparent_buttons_{task_id}".encode())],
+                
+                # المجموعة الثالثة: معالجة المحتوى
+                [Button.inline("🧹 منظف النصوص", f"edit_text_cleaner_{task_id}".encode()),
+                 Button.inline("🎨 تنسيق الرسائل", f"edit_message_formatting_{task_id}".encode())],
+                [Button.inline("🔄 الاستبدال الذكي", f"edit_smart_replacer_{task_id}".encode()),
+                 Button.inline("🔘 الأزرار المخصصة", f"edit_custom_buttons_{task_id}".encode())],
+                [Button.inline("📝 رأس وتذييل", f"edit_header_footer_{task_id}".encode()),
+                 Button.inline("🔗 معاينة الروابط", f"edit_link_preview_{task_id}".encode())],
+                
+                # المجموعة الرابعة: قوائم التحكم
                 [Button.inline("✅ قائمة السماح", f"edit_allow_list_{task_id}".encode()),
                  Button.inline("🚫 قائمة الحظر", f"edit_block_list_{task_id}".encode())],
-                [Button.inline("📝 تغيير الاسم", f"edit_task_name_{task_id}".encode()),
-                 Button.inline("⏱️ تأخير الإرسال", f"edit_delay_{task_id}".encode())],
+                
+                # المجموعة الخامسة: التوقيت والتزامن
+                [Button.inline("⏱️ تأخير الرسائل", f"edit_message_delay_{task_id}".encode()),
+                 Button.inline("🔄 تأخير التوجيه", f"edit_forward_delay_{task_id}".encode())],
+                [Button.inline("🔔 إعدادات الإشعارات", f"edit_notification_settings_{task_id}".encode()),
+                 Button.inline("🔗 مزامنة التعديل/الحذف", f"edit_sync_settings_{task_id}".encode())],
+                
+                # المجموعة السادسة: إعدادات خاصة
+                [Button.inline("💬 المحافظة على الردود", f"edit_reply_preservation_{task_id}".encode()),
+                 Button.inline("📌 تثبيت الرسائل", f"edit_pin_messages_{task_id}".encode())],
+                [Button.inline("🎯 نوع التوجيه", f"edit_forwarding_type_{task_id}".encode())],
+                
                 [Button.inline("🔙 العودة", b"multi_task_menu")]
             ]
             
