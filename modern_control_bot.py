@@ -647,6 +647,53 @@ class ModernControlBot:
                 format_type = parts[-1]
                 await self.set_task_message_format(event, task_id, format_type)
             
+            # Additional filter callbacks that were missing
+            elif data.startswith("toggle_task_language_filter_"):
+                task_id = data.replace("toggle_task_language_filter_", "")
+                await self.toggle_task_language_filter(event, task_id)
+            elif data.startswith("toggle_task_link_filter_"):
+                task_id = data.replace("toggle_task_link_filter_", "")
+                await self.toggle_task_link_filter(event, task_id)
+            elif data.startswith("toggle_task_forwarded_filter_"):
+                task_id = data.replace("toggle_task_forwarded_filter_", "")
+                await self.toggle_task_forwarded_filter(event, task_id)
+            elif data.startswith("toggle_task_user_filter_"):
+                task_id = data.replace("toggle_task_user_filter_", "")
+                await self.toggle_task_user_filter(event, task_id)
+            elif data.startswith("toggle_task_char_limit_"):
+                task_id = data.replace("toggle_task_char_limit_", "")
+                await self.toggle_task_char_limit(event, task_id)
+            elif data.startswith("toggle_task_duplicate_filter_"):
+                task_id = data.replace("toggle_task_duplicate_filter_", "")
+                await self.toggle_task_duplicate_filter(event, task_id)
+            elif data.startswith("toggle_task_transparent_buttons_"):
+                task_id = data.replace("toggle_task_transparent_buttons_", "")
+                await self.toggle_task_transparent_buttons(event, task_id)
+            elif data.startswith("toggle_task_message_formatting_"):
+                task_id = data.replace("toggle_task_message_formatting_", "")
+                await self.toggle_task_message_formatting(event, task_id)
+            elif data.startswith("edit_task_clean_words_"):
+                task_id = data.replace("edit_task_clean_words_", "")
+                await self.edit_task_clean_words(event, task_id)
+            elif data.startswith("toggle_task_message_delay_"):
+                task_id = data.replace("toggle_task_message_delay_", "")
+                await self.toggle_task_message_delay(event, task_id)
+            elif data.startswith("toggle_task_forward_delay_"):
+                task_id = data.replace("toggle_task_forward_delay_", "")
+                await self.toggle_task_forward_delay(event, task_id)
+            elif data.startswith("set_task_delay_"):
+                parts = data.replace("set_task_delay_", "").split("_")
+                if len(parts) >= 2:
+                    task_id = "_".join(parts[:-1])
+                    delay_value = parts[-1]
+                    await self.set_task_delay(event, task_id, delay_value)
+            elif data.startswith("set_char_limit_"):
+                parts = data.replace("set_char_limit_", "").split("_")
+                if len(parts) >= 2:
+                    task_id = "_".join(parts[:-1])
+                    limit_type = parts[-1]
+                    await self.set_task_char_limit(event, task_id, limit_type)
+            
             # Advanced settings callbacks
             elif data == "set_delay":
                 await self.prompt_delay_setting(event)
@@ -5101,20 +5148,18 @@ class ModernControlBot:
                 return "✅" if enabled else "❌"
             
             forwarded_filter_enabled = getattr(task_config, 'forwarded_filter_enabled', False)
-            block_forwarded = getattr(task_config, 'block_forwarded_messages', False)
             
             text = (
                 f"↩️ **فلتر المعاد توجيهها للمهمة**\n\n"
                 f"📝 **المهمة:** {task_config.name}\n"
-                f"🔧 **الحالة:** {get_status_emoji(forwarded_filter_enabled)}\n"
-                f"🚫 **حظر المعاد توجيهها:** {get_status_emoji(block_forwarded)}\n\n"
-                f"💡 **عند التفعيل، سيتم حظر الرسائل المعاد توجيهها من أي مكان آخر إلى المصدر**\n"
-                f"🔍 **هذا مفيد لضمان الحصول على محتوى أصلي فقط**"
+                f"🔧 **الحالة:** {get_status_emoji(forwarded_filter_enabled)}\n\n"
+                f"💡 **عند التفعيل، سيتم حظر الرسائل المعاد توجيهها من أي مكان آخر**\n"
+                f"🔍 **هذا مفيد لضمان الحصول على محتوى أصلي فقط**\n"
+                f"⚠️ **فقط الرسائل الأصلية سيتم توجيهها**"
             )
             
             keyboard = [
-                [Button.inline(f"⚡ تفعيل/إلغاء الفلتر {get_status_emoji(forwarded_filter_enabled)}", f"toggle_forwarded_filter_{task_id}".encode())],
-                [Button.inline(f"🚫 حظر المعاد توجيهها {get_status_emoji(block_forwarded)}", f"toggle_block_forwarded_{task_id}".encode())],
+                [Button.inline(f"⚡ تفعيل/تعطيل الفلتر {get_status_emoji(forwarded_filter_enabled)}", f"toggle_forwarded_filter_{task_id}".encode())],
                 [Button.inline("🔙 العودة لإعدادات المهمة", f"edit_specific_{task_id}".encode())]
             ]
             
@@ -5925,6 +5970,214 @@ class ModernControlBot:
         try:
             if not self.forwarder_instance:
                 await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            success = self.forwarder_instance.update_task_config(task_id, message_format=format_type)
+            if success:
+                format_names = {
+                    'original': 'الأصلي',
+                    'regular': 'عادي',
+                    'bold': 'عريض',
+                    'italic': 'مائل',
+                    'underline': 'مسطر',
+                    'strike': 'مشطوب',
+                    'code': 'كود',
+                    'mono': 'أحادي المسافة',
+                    'quote': 'اقتباس',
+                    'spoiler': 'مخفي',
+                    'hyperlink': 'رابط'
+                }
+                format_name = format_names.get(format_type, format_type)
+                await event.answer(f"✅ تم تغيير التنسيق إلى: {format_name}", alert=False)
+                await self.edit_task_message_formatting(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    # Add missing toggle functions that we need
+    async def toggle_task_user_filter(self, event, task_id):
+        """Toggle user filter for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_value = getattr(task_config, 'user_filter_enabled', False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, user_filter_enabled=new_value)
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ فلتر المستخدمين أصبح {status_text}", alert=False)
+                await self.edit_task_user_filter(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_char_limit(self, event, task_id):
+        """Toggle char limit filter for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_value = getattr(task_config, 'char_limit_enabled', False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, char_limit_enabled=new_value)
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ فلتر حد الأحرف أصبح {status_text}", alert=False)
+                await self.edit_task_char_limit(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_duplicate_filter(self, event, task_id):
+        """Toggle duplicate filter for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_value = getattr(task_config, 'duplicate_filter_enabled', False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, duplicate_filter_enabled=new_value)
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ فلتر التكرار أصبح {status_text}", alert=False)
+                await self.edit_task_duplicate_filter(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_transparent_buttons(self, event, task_id):
+        """Toggle transparent buttons filter for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_value = getattr(task_config, 'transparent_buttons_enabled', False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, transparent_buttons_enabled=new_value)
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ فلتر الأزرار الشفافة أصبح {status_text}", alert=False)
+                await self.edit_task_transparent_buttons(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_message_formatting(self, event, task_id):
+        """Toggle message formatting for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_value = getattr(task_config, 'message_formatting_enabled', False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, message_formatting_enabled=new_value)
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ تنسيق الرسائل أصبح {status_text}", alert=False)
+                await self.edit_task_message_formatting(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_message_delay(self, event, task_id):
+        """Toggle message delay for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_value = getattr(task_config, 'message_delay_enabled', False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, message_delay_enabled=new_value)
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ تأخير الرسائل أصبح {status_text}", alert=False)
+                await self.edit_task_message_delay(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
+
+    async def toggle_task_forward_delay(self, event, task_id):
+        """Toggle forward delay for specific task"""
+        try:
+            if not self.forwarder_instance:
+                await event.answer("❌ البوت الأساسي غير متصل", alert=True)
+                return
+            
+            task_config = self.forwarder_instance.get_task_config(task_id)
+            if not task_config:
+                await event.answer("❌ المهمة غير موجودة", alert=True)
+                return
+            
+            current_value = getattr(task_config, 'forward_delay_enabled', False)
+            new_value = not current_value
+            
+            success = self.forwarder_instance.update_task_config(task_id, forward_delay_enabled=new_value)
+            if success:
+                status_text = "مفعل" if new_value else "معطل"
+                await event.answer(f"✅ تأخير التوجيه أصبح {status_text}", alert=False)
+                await self.edit_task_forward_delay(event, task_id)
+            else:
+                await event.answer("❌ فشل في تحديث الإعدادات", alert=True)
+                
+        except Exception as e:
+            await event.answer(f"❌ خطأ: {e}", alert=True)
                 return
             
             format_names = {
